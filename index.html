@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Juvion-001™ · Questionnaire de suivi</title>
+<style>
+  :root{
+    --orange:#E8630A; --orange-dark:#C44F00; --tint:#FCEADD;
+    --ink:#211C18; --muted:#7A716A; --line:#E7DED5; --bg:#FAF6F1;
+    --card:#FFFFFF; --good:#2E7D5B; --shadow:0 1px 3px rgba(33,28,24,.06),0 8px 24px rgba(33,28,24,.05);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.45; font-size:16px;
+    padding-bottom:96px;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:0 16px}
+  header.top{
+    background:#fff;border-bottom:1px solid var(--line);
+    padding:18px 16px 16px;position:sticky;top:0;z-index:20;
+  }
+  header.top .wrap{display:flex;align-items:center;gap:12px}
+  header.top img{height:42px;width:auto;display:block}
+  header.top .ttl{font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.01em}
+  header.top .ttl b{display:block;color:var(--ink);font-size:15px;font-weight:700}
+  .progress{height:3px;background:var(--line);position:relative;margin-top:14px;border-radius:2px;overflow:hidden}
+  .progress>i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--orange);transition:width .35s ease}
+
+  .hero{padding:30px 0 6px}
+  .hero h1{font-size:25px;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
+  .hero h1 span{color:var(--orange)}
+  .hero p{margin:0;color:var(--muted);font-size:14.5px}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 18px;margin:16px 0;box-shadow:var(--shadow)}
+  .sec-eyebrow{display:flex;align-items:center;gap:10px;margin:0 0 4px}
+  .sec-eyebrow .n{flex:none;width:26px;height:26px;border-radius:8px;background:var(--orange);color:#fff;font-weight:700;font-size:14px;display:grid;place-items:center}
+  .sec-eyebrow h2{font-size:17px;margin:0;font-weight:700}
+  .sec-eyebrow .en{color:var(--muted);font-weight:500;font-size:13px;font-style:italic}
+  .hint{color:var(--muted);font-size:13.5px;margin:6px 0 14px}
+  .hint em{font-style:italic}
+
+  label.field{display:block;margin:12px 0}
+  label.field .lab{font-weight:600;font-size:14.5px;margin-bottom:6px;display:block}
+  label.field .lab em{color:var(--muted);font-weight:400;font-style:italic;font-size:13px}
+  input[type=text],input[type=number],select,textarea{
+    width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;font:inherit;color:var(--ink);background:#fff
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--orange);outline-offset:1px;border-color:var(--orange)}
+  textarea{min-height:64px;resize:vertical}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;font-size:14px;cursor:pointer;user-select:none;transition:.12s}
+  .chip[aria-pressed=true]{background:var(--orange);border-color:var(--orange);color:#fff;font-weight:600}
+
+  .q{padding:14px 0;border-top:1px solid var(--line)}
+  .q:first-of-type{border-top:0}
+  .q .qt{font-size:15px;font-weight:600;margin-bottom:2px}
+  .q .qt em{display:block;color:var(--muted);font-weight:400;font-style:italic;font-size:12.5px;margin-top:1px}
+  .scale{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+  .scale button{
+    border:1px solid var(--line);background:#fff;border-radius:10px;padding:12px 0;font-weight:700;font-size:15px;cursor:pointer;color:var(--ink);transition:.12s
+  }
+  .scale button.neg[aria-pressed=true]{background:#B23A2E;border-color:#B23A2E;color:#fff}
+  .scale button.zero[aria-pressed=true]{background:#6B6B6B;border-color:#6B6B6B;color:#fff}
+  .scale button.pos[aria-pressed=true]{background:var(--good);border-color:var(--good);color:#fff}
+  .scalekey{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px}
+  .scalekey span{font-size:10px;color:var(--muted);text-align:center;line-height:1.25}
+
+  .nrs{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .nrs button{flex:1 0 34px;border:1px solid var(--line);background:#fff;border-radius:9px;padding:11px 0;font-weight:700;cursor:pointer;color:var(--ink)}
+  .nrs button[aria-pressed=true]{background:var(--orange);border-color:var(--orange);color:#fff}
+  .nrs-ends{display:flex;justify-content:space-between;color:var(--muted);font-size:11.5px;margin-top:5px}
+
+  .checkgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media(max-width:460px){.checkgrid{grid-template-columns:1fr}}
+  .checkrow{display:flex;align-items:flex-start;gap:9px;border:1px solid var(--line);border-radius:10px;padding:10px 11px;cursor:pointer;font-size:13.5px}
+  .checkrow input{margin-top:2px;accent-color:var(--orange);width:17px;height:17px;flex:none}
+  .checkrow.on{border-color:var(--orange);background:var(--tint)}
+
+  .ae-row{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;position:relative}
+  .ae-row .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ae-del{position:absolute;top:8px;right:8px;border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1}
+  .addbtn{border:1px dashed var(--orange);color:var(--orange);background:var(--tint);border-radius:10px;padding:10px;width:100%;font-weight:600;cursor:pointer}
+
+  .note{display:flex;gap:10px;background:var(--tint);border-left:4px solid var(--orange);border-radius:10px;padding:12px 14px;font-size:13px;color:#7a4a22;margin:14px 0}
+  .note b{color:var(--orange-dark)}
+
+  .submitbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px 16px;z-index:30}
+  .submitbar .wrap{display:flex;gap:10px;align-items:center}
+  .btn{flex:1;background:var(--orange);color:#fff;border:0;border-radius:12px;padding:15px;font-size:16px;font-weight:700;cursor:pointer}
+  .btn:active{background:var(--orange-dark)}
+  .btn.sec{flex:none;background:#fff;color:var(--orange);border:1.5px solid var(--orange);padding:15px 16px}
+
+  .done{display:none;text-align:center;padding:48px 18px}
+  .done.show{display:block}
+  .done .mark{width:64px;height:64px;border-radius:50%;background:var(--good);display:grid;place-items:center;margin:0 auto 16px;color:#fff;font-size:32px}
+  .done h2{margin:0 0 6px}
+  .done p{color:var(--muted);margin:0 auto 20px;max-width:380px}
+  .done .actions{display:flex;flex-direction:column;gap:10px;max-width:320px;margin:0 auto}
+  .done .actions a,.done .actions button{display:block;text-decoration:none;text-align:center;border-radius:12px;padding:14px;font-weight:600;font-size:15px;cursor:pointer}
+  .done .actions .primary{background:var(--orange);color:#fff;border:0}
+  .done .actions .ghost{background:#fff;color:var(--orange);border:1.5px solid var(--orange)}
+
+  footer{color:var(--muted);font-size:12px;text-align:center;padding:24px 16px 8px}
+  .req{color:var(--orange)}
+  .err{display:none;color:#B23A2E;font-size:12.5px;margin-top:4px}
+  .err.show{display:block}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <img src="data:image/png;base64,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" alt="Juvion Health Sciences">
+    <div class="ttl"><b>Suivi Juvion-001™</b>Self-assessment &amp; follow-up</div>
+  </div>
+  <div class="wrap"><div class="progress"><i id="bar"></i></div></div>
+</header>
+
+<main id="formview">
+<div class="wrap">
+
+  <div class="hero">
+    <h1>Mon <span>questionnaire</span> de suivi</h1>
+    <p>Comparez votre ressenti à <b>avant</b> de commencer Juvion-001™. <em>Compare how you feel to before starting.</em></p>
+  </div>
+
+  <!-- Activation + point -->
+  <section class="card">
+    <div class="sec-eyebrow"><span class="n">A</span><h2>Identification</h2><span class="en">Identification</span></div>
+    <label class="field"><span class="lab">Code d’activation <span class="req">*</span> <em>/ Activation code</em></span>
+      <input type="text" id="actcode" placeholder="____-____-____" autocomplete="off"></label>
+    <label class="field"><span class="lab">Code participant <em>/ Participant ID</em></span>
+      <input type="text" id="pid" autocomplete="off"></label>
+    <div class="field"><span class="lab">Point de mesure <span class="req">*</span> <em>/ Assessment point</em></span>
+      <div class="chips" id="point" data-single="1">
+        <button type="button" class="chip" data-v="J0">Référence J0</button>
+        <button type="button" class="chip" data-v="J5">Jour 5</button>
+        <button type="button" class="chip" data-v="J10">Jour 10</button>
+        <button type="button" class="chip" data-v="J20">Jour 20</button>
+        <button type="button" class="chip" data-v="J60">Suivi J60</button>
+      </div>
+      <div class="err" id="point-err">Sélectionnez un point de mesure. <em>Please select an assessment point.</em></div>
+    </div>
+    <div class="note"><div>ℹ</div><div>À <b>J0</b>, complétez aussi vos caractéristiques ci-dessous. Aux points suivants, elles sont déjà connues. <em>At J0, also complete your characteristics below; at later points they are carried forward.</em></div></div>
+  </section>
+
+  <!-- Baseline-only profile -->
+  <section class="card" id="profile">
+    <div class="sec-eyebrow"><span class="n">B</span><h2>Mes caractéristiques</h2><span class="en">About me (J0)</span></div>
+    <p class="hint">À remplir une seule fois à la référence. <em>Complete once at baseline.</em></p>
+    <div class="checkgrid">
+      <label class="field"><span class="lab">Tranche d’âge <em>/ Age group</em></span>
+        <select id="age"><option value=""></option><option>40–49</option><option>50–59</option><option>60–69</option><option>70–79</option><option>80+</option></select></label>
+      <label class="field"><span class="lab">Sexe <em>/ Sex</em></span>
+        <select id="sex"><option value=""></option><option>F</option><option>M</option><option>Autre / Other</option></select></label>
+      <label class="field"><span class="lab">Taille (cm) <em>/ Height</em></span><input type="number" id="height" inputmode="numeric"></label>
+      <label class="field"><span class="lab">Poids (kg) <em>/ Weight</em></span><input type="number" id="weight" inputmode="numeric"></label>
+    </div>
+    <label class="field"><span class="lab">Affections existantes <em>/ Existing conditions</em></span><textarea id="cond"></textarea></label>
+    <label class="field"><span class="lab">Médicaments actuels <em>/ Current medications</em></span><textarea id="meds"></textarea></label>
+    <div class="checkgrid">
+      <label class="field"><span class="lab">Statut tabagique <em>/ Smoking</em></span>
+        <select id="smoke"><option value=""></option><option>Non-fumeur / Non-smoker</option><option>Ancien / Former</option><option>Fumeur / Smoker</option></select></label>
+      <label class="field"><span class="lab">Activité physique <em>/ Activity</em></span>
+        <select id="activity"><option value=""></option><option>Faible / Low</option><option>Modérée / Moderate</option><option>Élevée / High</option></select></label>
+    </div>
+    <div class="checkgrid">
+      <label class="field"><span class="lab">Numéro de lot <em>/ Batch no.</em></span><input type="text" id="batch"></label>
+      <label class="field"><span class="lab">Date de péremption <em>/ Expiry</em></span><input type="text" id="expiry" placeholder="MM/AAAA"></label>
+    </div>
+    <div class="note"><div>ℹ</div><div>La posologie est définie par le protocole. <em>Dosage is set by the protocol.</em></div></div>
+  </section>
+
+  <!-- Rating scale legend -->
+  <section class="card">
+    <div class="sec-eyebrow"><span class="n">C</span><h2>Comment répondre</h2><span class="en">How to answer</span></div>
+    <p class="hint">Une réponse par ligne, selon les 7 derniers jours. Une amélioration, une stabilité ou une aggravation ont la même valeur. <em>One answer per line, based on the last 7 days; all answers are equally valuable.</em></p>
+    <div class="scale" aria-hidden="true">
+      <button type="button" class="neg" aria-pressed="true" disabled>−2</button>
+      <button type="button" class="neg" aria-pressed="true" disabled>−1</button>
+      <button type="button" class="zero" aria-pressed="true" disabled>0</button>
+      <button type="button" class="pos" aria-pressed="true" disabled>+1</button>
+      <button type="button" class="pos" aria-pressed="true" disabled>+2</button>
+    </div>
+    <div class="scalekey">
+      <span>Nettement pire<br>Much worse</span><span>Légèrement pire<br>Slightly worse</span><span>Aucun chgt<br>No change</span><span>Légèrement mieux<br>Slightly better</span><span>Nettement mieux<br>Much better</span>
+    </div>
+  </section>
+
+  <!-- Global impression -->
+  <section class="card">
+    <div class="sec-eyebrow"><span class="n">D</span><h2>Impression globale</h2><span class="en">Global impression</span></div>
+    <div class="q" data-scale="global"><div class="qt">Mon état général, par rapport à avant<em>My overall condition vs before</em></div></div>
+  </section>
+
+  <div id="sections"></div>
+
+  <!-- Pain -->
+  <section class="card">
+    <div class="sec-eyebrow"><span class="n">7</span><h2>Douleur</h2><span class="en">Pain</span></div>
+    <p class="hint">Votre douleur aujourd’hui. <em>Your pain today.</em></p>
+    <div class="nrs" id="pain"></div>
+    <div class="nrs-ends"><span>0 · aucune / none</span><span>10 · pire imaginable / worst</span></div>
+  </section>
+
+  <!-- Objective -->
+  <section class="card">
+    <div class="sec-eyebrow"><span class="n">8</span><h2>Mesures objectives</h2><span class="en">Objective measures</span></div>
+    <p class="hint">Seulement si facilement disponible — facultatif. <em>Only if readily available — optional.</em></p>
+    <div class="checkgrid">
+      <label class="field"><span class="lab">Pas / jour <em>/ Steps per day</em></span><input type="number" id="steps" inputmode="numeric"></label>
+      <label class="field"><span class="lab">Monter un étage (sec) <em>/ One flight (s)</em></span><input type="number" id="stairs" inputmode="numeric"></label>
+      <label class="field"><span class="lab">Heures de sommeil <em>/ Hours slept</em></span><input type="number" id="sleeph" inputmode="decimal"></label>
+    </div>
+  </section>
+
+  <!-- Adverse events -->
+  <section class="card">
+    <div class="sec-eyebrow"><span class="n">9</span><h2>Effets indésirables</h2><span class="en">Adverse events</span></div>
+    <p class="hint">Ajoutez une ligne par symptôme. <em>One row per symptom.</em></p>
+    <div id="ae-list"></div>
+    <button type="button" class="addbtn" id="ae-add">+ Ajouter un symptôme / Add symptom</button>
+    <label class="checkrow" style="margin-top:12px"><input type="checkbox" id="ae-stop"><span>J’ai arrêté le produit <em>/ I stopped the product</em></span></label>
+    <label class="checkrow" style="margin-top:8px"><input type="checkbox" id="ae-md"><span>J’ai consulté un médecin <em>/ I sought medical advice</em></span></label>
+    <label class="checkrow" style="margin-top:8px"><input type="checkbox" id="ae-hosp"><span>Hospitalisation nécessaire <em>/ Hospitalisation required</em></span></label>
+  </section>
+
+  <!-- Concomitant -->
+  <section class="card">
+    <div class="sec-eyebrow"><span class="n">10</span><h2>Facteurs concomitants</h2><span class="en">Concomitant factors</span></div>
+    <p class="hint">Cochez tout ce qui s’applique. <em>Tick all that apply.</em></p>
+    <div class="checkgrid" id="concom"></div>
+  </section>
+
+  <!-- Satisfaction -->
+  <section class="card">
+    <div class="sec-eyebrow"><span class="n">11</span><h2>Satisfaction</h2><span class="en">Satisfaction</span></div>
+    <div class="field"><span class="lab">Satisfaction globale <em>/ Overall satisfaction</em></span>
+      <div class="chips" data-single="1" id="sat">
+        <button type="button" class="chip" data-v="Très insatisfait">Très insatisfait</button>
+        <button type="button" class="chip" data-v="Insatisfait">Insatisfait</button>
+        <button type="button" class="chip" data-v="Neutre">Neutre</button>
+        <button type="button" class="chip" data-v="Satisfait">Satisfait</button>
+        <button type="button" class="chip" data-v="Très satisfait">Très satisfait</button>
+      </div>
+    </div>
+    <div class="field"><span class="lab">Continuer Juvion-001™ ? <em>/ Continue using it?</em></span>
+      <div class="chips" data-single="1" id="cont">
+        <button type="button" class="chip" data-v="Certainement pas">Certainement pas</button>
+        <button type="button" class="chip" data-v="Probablement pas">Probablement pas</button>
+        <button type="button" class="chip" data-v="Incertain">Incertain</button>
+        <button type="button" class="chip" data-v="Probablement oui">Probablement oui</button>
+        <button type="button" class="chip" data-v="Certainement oui">Certainement oui</button>
+      </div>
+    </div>
+    <div class="field"><span class="lab">Le recommanderiez-vous ? <em>/ Would you recommend it? (0–10)</em></span>
+      <div class="nrs" id="nps"></div>
+      <div class="nrs-ends"><span>0 · pas du tout / not at all</span><span>10 · tout à fait / absolutely</span></div>
+    </div>
+  </section>
+
+  <!-- Observatory -->
+  <section class="card">
+    <div class="sec-eyebrow"><span class="n">12</span><h2>Observatoire</h2><span class="en">Observatory</span></div>
+    <label class="field"><span class="lab">Changements inattendus <em>/ Unexpected changes</em></span><textarea id="obs1"></textarea></label>
+    <label class="field"><span class="lab">Moment où l’effet est le plus marqué <em>/ When most noticeable</em></span><textarea id="obs2"></textarea></label>
+    <label class="field"><span class="lab">Autres remarques <em>/ Other remarks</em></span><textarea id="obs3"></textarea></label>
+  </section>
+
+  <!-- Compliance -->
+  <section class="card">
+    <div class="sec-eyebrow"><span class="n">13</span><h2>Conformité</h2><span class="en">Compliance</span></div>
+    <div class="field"><span class="lab">Doses manquées <em>/ Missed doses</em></span>
+      <div class="chips" data-single="1" id="missed">
+        <button type="button" class="chip" data-v="Aucune">Aucune</button>
+        <button type="button" class="chip" data-v="1–2">1–2</button>
+        <button type="button" class="chip" data-v="3–5">3–5</button>
+        <button type="button" class="chip" data-v="5+">Plus de 5</button>
+      </div>
+    </div>
+    <label class="field"><span class="lab">Observance estimée (%) <em>/ Estimated compliance</em></span><input type="number" id="comp" inputmode="numeric" max="100"></label>
+    <label class="field"><span class="lab">Raison des doses manquées <em>/ Reason</em></span><textarea id="missreason"></textarea></label>
+  </section>
+
+  <footer>Juvion Health Sciences SA · Swiss Made · juvionswiss.com<br>Données traitées dans le cadre de l’étude de suivi Juvion-001™.</footer>
+</div>
+</main>
+
+<!-- Confirmation -->
+<div class="done" id="done">
+  <div class="wrap">
+    <div class="mark">✓</div>
+    <h2>Merci !</h2>
+    <p>Votre questionnaire est prêt à être transmis. <em>Your questionnaire is ready to send.</em></p>
+    <div class="actions">
+      <a class="primary" id="email-link" href="#">Envoyer par e-mail / Send by email</a>
+      <button class="ghost" id="dl-link">Télécharger mes réponses / Download</button>
+      <button class="ghost" id="back-link">Modifier / Edit answers</button>
+    </div>
+  </div>
+</div>
+
+<div class="submitbar" id="submitbar">
+  <div class="wrap">
+    <button class="btn" id="submit">Terminer · Submit</button>
+  </div>
+</div>
+
+<script>
+const SCALE_SECTIONS = [
+  {n:1, fr:"Mouvement & mobilité", en:"Movement & mobility", q:[
+    ["Marcher est plus facile","Walking is easier"],
+    ["Me lever d’une chaise est plus facile","Standing up from a chair is easier"],
+    ["Monter les escaliers est plus facile","Climbing stairs is easier"]]},
+  {n:2, fr:"Énergie & fatigue", en:"Energy & fatigue", q:[
+    ["Mon niveau d’énergie a changé","My energy level has changed"]]},
+  {n:3, fr:"Qualité du sommeil", en:"Sleep quality", q:[
+    ["La qualité de mon sommeil a changé","My sleep quality has changed"]]},
+  {n:4, fr:"Force & endurance", en:"Strength & endurance", q:[
+    ["Ma force générale a changé","My overall strength has changed"],
+    ["Mon endurance a changé","My endurance has changed"]]},
+  {n:5, fr:"Coordination & équilibre", en:"Coordination & balance", q:[
+    ["Mon équilibre et ma coordination ont changé","My balance and coordination have changed"]]},
+  {n:6, fr:"Humeur & bien-être", en:"Mood & well-being", q:[
+    ["Mon humeur a changé","My mood has changed"],
+    ["Ma qualité de vie a changé","My quality of life has changed"]]},
+];
+const CONCOM = [
+  ["Augmentation de l’exercice","Increased exercise"],["Diminution de l’exercice","Reduced exercise"],
+  ["Maladie","Illness"],["Stress accru","Increased stress"],
+  ["Nouveau médicament","New medication"],["Changement d’alimentation","Change in diet"],
+  ["Mauvais sommeil","Poor sleep"],["Blessure","Injury"]
+];
+const answers = {scales:{}, concom:[], ae:[]};
+
+function scaleRow(qfr,qen,key){
+  const labels=["−2","−1","0","+1","+2"], cls=["neg","neg","zero","pos","pos"], vals=[-2,-1,0,1,2];
+  let b='<div class="q" data-key="'+key+'"><div class="qt">'+qfr+'<em>'+qen+'</em></div><div class="scale">';
+  for(let i=0;i<5;i++) b+='<button type="button" class="'+cls[i]+'" data-val="'+vals[i]+'" aria-pressed="false">'+labels[i]+'</button>';
+  b+='</div></div>';
+  return b;
+}
+// build scale sections
+const secWrap=document.getElementById('sections');
+SCALE_SECTIONS.forEach(s=>{
+  let html='<section class="card"><div class="sec-eyebrow"><span class="n">'+s.n+'</span><h2>'+s.fr+'</h2><span class="en">'+s.en+'</span></div>';
+  s.q.forEach((q,i)=>{html+=scaleRow(q[0],q[1],'s'+s.n+'_'+i);});
+  html+='</section>';
+  secWrap.insertAdjacentHTML('beforeend',html);
+});
+// global impression row uses same scale
+const gi=document.querySelector('[data-scale="global"]');
+gi.insertAdjacentHTML('beforeend','<div class="scale" data-key="global">'+
+  ['−2','−1','0','+1','+2'].map((l,i)=>{const cls=['neg','neg','zero','pos','pos'][i];const v=[-2,-1,0,1,2][i];
+   return '<button type="button" class="'+cls+'" data-val="'+v+'" aria-pressed="false">'+l+'</button>';}).join('')+'</div>');
+
+// scale click handling (delegated)
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('.scale button:not([disabled])');
+  if(!btn) return;
+  const row=btn.closest('.q')||btn.closest('[data-scale]');
+  const key=(btn.parentElement.dataset.key)||(row&&row.dataset.key)||(row&&row.dataset.scale);
+  const k=btn.parentElement.dataset.key||row.dataset.key||'global';
+  btn.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed','false'));
+  btn.setAttribute('aria-pressed','true');
+  answers.scales[k]=Number(btn.dataset.val);
+  updateBar();
+});
+
+// single-select chips
+document.querySelectorAll('.chips[data-single]').forEach(grp=>{
+  grp.addEventListener('click',e=>{
+    const c=e.target.closest('.chip'); if(!c) return;
+    grp.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed','false'));
+    c.setAttribute('aria-pressed','true'); grp.dataset.value=c.dataset.v; updateBar();
+  });
+});
+
+// NRS builders
+function buildNRS(id){
+  const el=document.getElementById(id);
+  for(let i=0;i<=10;i++){const b=document.createElement('button');b.type='button';b.textContent=i;b.dataset.val=i;b.setAttribute('aria-pressed','false');el.appendChild(b);}
+  el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');el.dataset.value=b.dataset.val;updateBar();});
+}
+buildNRS('pain'); buildNRS('nps');
+
+// concomitant checks
+const cg=document.getElementById('concom');
+CONCOM.forEach((c,i)=>{
+  const l=document.createElement('label');l.className='checkrow';
+  l.innerHTML='<input type="checkbox" data-v="'+c[0]+'"><span>'+c[0]+'<em>'+c[1]+'</em></span>';
+  l.querySelector('input').addEventListener('change',ev=>{l.classList.toggle('on',ev.target.checked);});
+  cg.appendChild(l);
+});
+
+// adverse events
+const aeList=document.getElementById('ae-list');
+function addAE(){
+  const d=document.createElement('div');d.className='ae-row';
+  d.innerHTML='<button type="button" class="ae-del" title="Supprimer">×</button>'+
+    '<label class="field"><span class="lab">Symptôme <em>/ Symptom</em></span><input type="text" class="ae-sym"></label>'+
+    '<div class="grid2">'+
+      '<label class="field"><span class="lab">Sévérité <em>/ Severity</em></span><select class="ae-sev"><option value=""></option><option>Légère / Mild</option><option>Modérée / Moderate</option><option>Sévère / Severe</option></select></label>'+
+      '<label class="field"><span class="lab">Lié au produit ? <em>/ Related?</em></span><select class="ae-rel"><option value=""></option><option>Oui / Yes</option><option>Non / No</option><option>Incertain / Unsure</option></select></label>'+
+    '</div>';
+  d.querySelector('.ae-del').addEventListener('click',()=>d.remove());
+  aeList.appendChild(d);
+}
+document.getElementById('ae-add').addEventListener('click',addAE);
+
+// progress bar
+function updateBar(){
+  const totalScales=1+SCALE_SECTIONS.reduce((a,s)=>a+s.q.length,0);
+  const doneScales=Object.keys(answers.scales).length;
+  const extras=[document.getElementById('actcode').value?1:0,
+    document.getElementById('point').dataset.value?1:0,
+    document.getElementById('pain').dataset.value?1:0];
+  const got=doneScales+extras.reduce((a,b)=>a+b,0);
+  const total=totalScales+3;
+  document.getElementById('bar').style.width=Math.min(100,Math.round(got/total*100))+'%';
+}
+['actcode'].forEach(id=>document.getElementById(id).addEventListener('input',updateBar));
+
+// collect + submit
+function collect(){
+  const g=id=>document.getElementById(id);
+  const chip=id=>g(id).dataset.value||"";
+  const nrs=id=>g(id).dataset.value||"";
+  const concom=[...cg.querySelectorAll('input:checked')].map(i=>i.dataset.v);
+  const ae=[...aeList.querySelectorAll('.ae-row')].map(r=>({
+    symptome:r.querySelector('.ae-sym').value, severite:r.querySelector('.ae-sev').value, lie:r.querySelector('.ae-rel').value
+  })).filter(x=>x.symptome);
+  return {
+    code_activation:g('actcode').value, code_participant:g('pid').value,
+    point_de_mesure:g('point').dataset.value||"",
+    date_soumission:new Date().toISOString().slice(0,16).replace('T',' '),
+    profil:{age:g('age').value,sexe:g('sex').value,taille:g('height').value,poids:g('weight').value,
+      affections:g('cond').value,medicaments:g('meds').value,tabac:g('smoke').value,activite:g('activity').value,
+      lot:g('batch').value,peremption:g('expiry').value},
+    echelles:answers.scales,
+    douleur:nrs('pain'),
+    mesures:{pas:g('steps').value,escalier_s:g('stairs').value,sommeil_h:g('sleeph').value},
+    effets:{symptomes:ae,arret:g('ae-stop').checked,medecin:g('ae-md').checked,hospitalisation:g('ae-hosp').checked},
+    facteurs:concom,
+    satisfaction:chip('sat'),continuer:chip('cont'),recommandation_nps:nrs('nps'),
+    observatoire:{inattendus:g('obs1').value,moment:g('obs2').value,autres:g('obs3').value},
+    conformite:{doses_manquees:chip('missed'),observance_pct:g('comp').value,raison:g('missreason').value}
+  };
+}
+
+document.getElementById('submit').addEventListener('click',()=>{
+  const errs=[];
+  if(!document.getElementById('actcode').value.trim()){document.getElementById('actcode').focus();errs.push('code');}
+  const pe=document.getElementById('point-err');
+  if(!document.getElementById('point').dataset.value){pe.classList.add('show');errs.push('point');}else{pe.classList.remove('show');}
+  if(errs.length){window.scrollTo({top:0,behavior:'smooth'});return;}
+
+  const data=collect();
+  const json=JSON.stringify(data,null,2);
+  const fname='Juvion_'+(data.code_participant||'participant')+'_'+(data.point_de_mesure||'')+'.json';
+
+  // download
+  document.getElementById('dl-link').onclick=()=>{
+    const blob=new Blob([json],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;a.click();
+  };
+  // email
+  const subj=encodeURIComponent('Suivi Juvion-001 · '+(data.code_participant||'')+' · '+(data.point_de_mesure||''));
+  const body=encodeURIComponent('Réponses du questionnaire (copier le bloc ci-dessous) :\n\n'+json);
+  document.getElementById('email-link').href='mailto:data@juvionswiss.com?subject='+subj+'&body='+body;
+
+  document.getElementById('formview').style.display='none';
+  document.getElementById('submitbar').style.display='none';
+  document.getElementById('done').classList.add('show');
+  window.scrollTo({top:0});
+});
+document.getElementById('back-link').addEventListener('click',()=>{
+  document.getElementById('done').classList.remove('show');
+  document.getElementById('formview').style.display='';
+  document.getElementById('submitbar').style.display='';
+});
+
+// start with one AE row collapsed? leave empty; add first on demand
+</script>
+</body>
+</html>
