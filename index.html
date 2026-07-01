@@ -500,11 +500,11 @@ input[type="range"]::-moz-range-thumb {
       <p class="field-label" data-i18n="ap_section">Point de mesure</p>
       <p class="field-hint" data-i18n="ap_note">Complétez ce questionnaire pour chacun des jours suivants, pour visualiser les changements au cours du temps</p>
       <div class="checkpoint-grid">
-        <label class="checkpoint-item"><input type="checkbox" name="assessment_point[]" value="J0"><span data-i18n="ap_j0">Référence (Jour 0)</span></label>
-        <label class="checkpoint-item"><input type="checkbox" name="assessment_point[]" value="D5"><span data-i18n="ap_d5">Jour 5</span></label>
-        <label class="checkpoint-item"><input type="checkbox" name="assessment_point[]" value="D10"><span data-i18n="ap_d10">Jour 10</span></label>
-        <label class="checkpoint-item"><input type="checkbox" name="assessment_point[]" value="D20"><span data-i18n="ap_d20">Jour 20</span></label>
-        <label class="checkpoint-item"><input type="checkbox" name="assessment_point[]" value="J60"><span data-i18n="ap_j60">Suivi (Jour 60)</span></label>
+        <label class="checkpoint-item"><input type="radio" name="assessment_point" value="J0" required><span data-i18n="ap_j0">Référence (Jour 0)</span></label>
+        <label class="checkpoint-item"><input type="radio" name="assessment_point" value="D5"><span data-i18n="ap_d5">Jour 5</span></label>
+        <label class="checkpoint-item"><input type="radio" name="assessment_point" value="D10"><span data-i18n="ap_d10">Jour 10</span></label>
+        <label class="checkpoint-item"><input type="radio" name="assessment_point" value="D20"><span data-i18n="ap_d20">Jour 20</span></label>
+        <label class="checkpoint-item"><input type="radio" name="assessment_point" value="J60"><span data-i18n="ap_j60">Suivi (Jour 60)</span></label>
       </div>
     </div>
   </section>
