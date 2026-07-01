@@ -476,7 +476,7 @@ input[type="range"]::-moz-range-thumb {
 
 <main>
 <div class="page-wrap">
-<form id="juvion-form" method="POST" action="https://formspree.io/f/PLACEHOLDER" novalidate>
+<form id="juvion-form" method="POST" action="https://formspree.io/f/xgojnzok">
   <input type="hidden" name="language" id="lang-field" value="fr">
   <input type="hidden" name="_subject" value="JuvionHS-001™ Follow-up">
 
@@ -487,11 +487,11 @@ input[type="range"]::-moz-range-thumb {
       <label class="field-label" data-i18n="activation_label">Code d'activation</label>
       <p class="field-hint" data-i18n="activation_hint">Scannez le QR code ou entrez votre code d'activation (3 parties)</p>
       <div class="activation-row">
-        <input type="text" name="activation_1" class="activation-input" maxlength="6" autocomplete="off" spellcheck="false">
+        <input type="text" name="activation_1" class="activation-input" required maxlength="6" autocomplete="off" spellcheck="false">
         <span class="activation-sep">—</span>
-        <input type="text" name="activation_2" class="activation-input" maxlength="6" autocomplete="off" spellcheck="false">
+        <input type="text" name="activation_2" class="activation-input" required maxlength="6" autocomplete="off" spellcheck="false">
         <span class="activation-sep">—</span>
-        <input type="text" name="activation_3" class="activation-input" maxlength="6" autocomplete="off" spellcheck="false">
+        <input type="text" name="activation_3" class="activation-input" required maxlength="6" autocomplete="off" spellcheck="false">
       </div>
     </div>
     <div class="field-group">
@@ -513,7 +513,7 @@ input[type="range"]::-moz-range-thumb {
     <div class="field-grid-2">
       <div class="field-group">
         <label class="field-label" for="participant_id" data-i18n="participant_id_label">Code participant</label>
-        <input type="text" id="participant_id" name="participant_id" autocomplete="off">
+        <input type="text" id="participant_id" name="participant_id" required autocomplete="off">
       </div>
       <div class="field-group">
         <label class="field-label" for="participant_name" data-i18n="participant_name_label">Nom (facultatif)</label>
@@ -522,12 +522,12 @@ input[type="range"]::-moz-range-thumb {
     </div>
     <div class="field-group" style="max-width: 200px;">
       <label class="field-label" for="date" data-i18n="date_label">Date</label>
-      <input type="date" id="date" name="date">
+      <input type="date" id="date" name="date" required>
     </div>
     <div class="field-grid-2">
       <div class="field-group">
         <label class="field-label" for="age_group" data-i18n="age_group_label">Tranche d'âge</label>
-        <select id="age_group" name="age_group">
+        <select id="age_group" name="age_group" required>
           <option value=""></option>
           <option value="under30" data-i18n="age_opt_under30">&lt; 30 ans</option>
           <option value="30_44" data-i18n="age_opt_30_44">30–44 ans</option>
@@ -538,7 +538,7 @@ input[type="range"]::-moz-range-thumb {
       </div>
       <div class="field-group">
         <label class="field-label" for="sex" data-i18n="sex_label">Sexe</label>
-        <select id="sex" name="sex">
+        <select id="sex" name="sex" required>
           <option value=""></option>
           <option value="female" data-i18n="sex_opt_f">Féminin</option>
           <option value="male" data-i18n="sex_opt_m">Masculin</option>
@@ -549,25 +549,25 @@ input[type="range"]::-moz-range-thumb {
     <div class="field-grid-2">
       <div class="field-group">
         <label class="field-label" for="height_cm" data-i18n="height_label">Taille (cm)</label>
-        <input type="number" id="height_cm" name="height_cm" min="100" max="220" step="1">
+        <input type="number" id="height_cm" name="height_cm" required min="100" max="220" step="1">
       </div>
       <div class="field-group">
         <label class="field-label" for="weight_kg" data-i18n="weight_label">Poids (kg)</label>
-        <input type="number" id="weight_kg" name="weight_kg" min="30" max="250" step="0.1">
+        <input type="number" id="weight_kg" name="weight_kg" required min="30" max="250" step="0.1">
       </div>
     </div>
     <div class="field-group">
       <label class="field-label" for="existing_conditions" data-i18n="conditions_label">Conditions médicales présentes</label>
-      <textarea id="existing_conditions" name="existing_conditions" rows="2"></textarea>
+      <textarea id="existing_conditions" name="existing_conditions" required rows="2"></textarea>
     </div>
     <div class="field-group">
       <label class="field-label" for="current_medications" data-i18n="medications_label">Médicaments actuels : nom(s) et dosage(s)</label>
-      <textarea id="current_medications" name="current_medications" rows="2"></textarea>
+      <textarea id="current_medications" name="current_medications" required rows="2"></textarea>
     </div>
     <div class="field-grid-2">
       <div class="field-group">
         <label class="field-label" for="smoking" data-i18n="smoking_label">Fumeur / non-fumeur</label>
-        <select id="smoking" name="smoking">
+        <select id="smoking" name="smoking" required>
           <option value=""></option>
           <option value="never" data-i18n="smoking_opt_never">Jamais fumé</option>
           <option value="ex" data-i18n="smoking_opt_ex">Ex-fumeur / ex-fumeuse</option>
@@ -576,7 +576,7 @@ input[type="range"]::-moz-range-thumb {
       </div>
       <div class="field-group">
         <label class="field-label" for="activity_level" data-i18n="activity_label">Niveau d'activité physique</label>
-        <select id="activity_level" name="activity_level">
+        <select id="activity_level" name="activity_level" required>
           <option value=""></option>
           <option value="sedentary" data-i18n="activity_opt_sedentary">Sédentaire</option>
           <option value="light" data-i18n="activity_opt_light">Légère</option>
@@ -593,11 +593,11 @@ input[type="range"]::-moz-range-thumb {
     <div class="field-grid-2">
       <div class="field-group">
         <label class="field-label" for="batch_number" data-i18n="batch_label">Numéro de lot</label>
-        <input type="text" id="batch_number" name="batch_number" autocomplete="off">
+        <input type="text" id="batch_number" name="batch_number" required autocomplete="off">
       </div>
       <div class="field-group">
         <label class="field-label" for="expiry_date" data-i18n="expiry_label">Date de péremption</label>
-        <input type="date" id="expiry_date" name="expiry_date">
+        <input type="date" id="expiry_date" name="expiry_date" required>
       </div>
     </div>
   </section>
@@ -694,7 +694,7 @@ input[type="range"]::-moz-range-thumb {
     <div class="field-group">
       <p class="field-label" data-i18n="missed_label">Combien de doses avez-vous manquées ?</p>
       <div class="radio-list">
-        <label class="radio-item"><input type="radio" name="missed_doses" value="none"><span data-i18n="missed_none">Aucune</span></label>
+        <label class="radio-item"><input type="radio" name="missed_doses" value="none" required><span data-i18n="missed_none">Aucune</span></label>
         <label class="radio-item"><input type="radio" name="missed_doses" value="1-2"><span data-i18n="missed_1_2">1–2</span></label>
         <label class="radio-item"><input type="radio" name="missed_doses" value="3-5"><span data-i18n="missed_3_5">3–5</span></label>
         <label class="radio-item"><input type="radio" name="missed_doses" value="more_than_5"><span data-i18n="missed_more5">Plus de 5</span></label>
@@ -712,7 +712,7 @@ input[type="range"]::-moz-range-thumb {
     <div class="field-group">
       <p class="field-label" data-i18n="satisfaction_label">Satisfaction globale</p>
       <div class="radio-list">
-        <label class="radio-item"><input type="radio" name="satisfaction" value="very_dissatisfied"><span data-i18n="sat_very_dis">Très insatisfait·e</span></label>
+        <label class="radio-item"><input type="radio" name="satisfaction" value="very_dissatisfied" required><span data-i18n="sat_very_dis">Très insatisfait·e</span></label>
         <label class="radio-item"><input type="radio" name="satisfaction" value="dissatisfied"><span data-i18n="sat_dis">Insatisfait·e</span></label>
         <label class="radio-item"><input type="radio" name="satisfaction" value="neutral"><span data-i18n="sat_neutral">Neutre</span></label>
         <label class="radio-item"><input type="radio" name="satisfaction" value="satisfied"><span data-i18n="sat_sat">satisfait·e</span></label>
@@ -722,7 +722,7 @@ input[type="range"]::-moz-range-thumb {
     <div class="field-group">
       <p class="field-label" data-i18n="continue_label">Continueriez-vous à utiliser JuvionHS-001™ ?</p>
       <div class="radio-list">
-        <label class="radio-item"><input type="radio" name="would_continue" value="definitely_not"><span data-i18n="cont_def_no">Certainement pas</span></label>
+        <label class="radio-item"><input type="radio" name="would_continue" value="definitely_not" required><span data-i18n="cont_def_no">Certainement pas</span></label>
         <label class="radio-item"><input type="radio" name="would_continue" value="probably_not"><span data-i18n="cont_prob_no">Probablement pas</span></label>
         <label class="radio-item"><input type="radio" name="would_continue" value="unsure"><span data-i18n="cont_unsure">Incertain·e</span></label>
         <label class="radio-item"><input type="radio" name="would_continue" value="probably_yes"><span data-i18n="cont_prob_yes">Probablement oui</span></label>
@@ -748,15 +748,15 @@ input[type="range"]::-moz-range-thumb {
     <p class="field-hint" data-i18n="s12_hint">Espace libre pour tout ce qui n'est pas couvert ci-dessus — changements inattendus, positifs comme négatifs.</p>
     <div class="field-group">
       <label class="field-label" for="unexpected_changes" data-i18n="unexpected_label">Changements inattendus remarqués</label>
-      <textarea id="unexpected_changes" name="unexpected_changes" rows="3"></textarea>
+      <textarea id="unexpected_changes" name="unexpected_changes" required rows="3"></textarea>
     </div>
     <div class="field-group">
       <label class="field-label" for="time_of_day_effect" data-i18n="time_label">Moment de la journée où l'effet est le plus marqué</label>
-      <input type="text" id="time_of_day_effect" name="time_of_day_effect">
+      <input type="text" id="time_of_day_effect" name="time_of_day_effect" required>
     </div>
     <div class="field-group">
       <label class="field-label" for="other_remarks" data-i18n="remarks_label">Autres remarques ou observations</label>
-      <textarea id="other_remarks" name="other_remarks" rows="3"></textarea>
+      <textarea id="other_remarks" name="other_remarks" required rows="3"></textarea>
     </div>
   </section>
 
@@ -973,7 +973,7 @@ function buildScaleRow(name, labelText) {
   return `<div class="question-row">
     <p class="question-text">${labelText}</p>
     <div class="scale-cells">
-      <label class="scale-cell"><input type="radio" name="${name}" value="-2"><span class="cell-btn" data-scale="m2">−2</span></label>
+      <label class="scale-cell"><input type="radio" name="${name}" value="-2" required><span class="cell-btn" data-scale="m2">−2</span></label>
       <label class="scale-cell"><input type="radio" name="${name}" value="-1"><span class="cell-btn" data-scale="m1">−1</span></label>
       <label class="scale-cell"><input type="radio" name="${name}" value="0"><span class="cell-btn" data-scale="0">0</span></label>
       <label class="scale-cell"><input type="radio" name="${name}" value="1"><span class="cell-btn" data-scale="p1">+1</span></label>
