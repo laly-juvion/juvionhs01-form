@@ -548,11 +548,11 @@ input[type="range"]::-moz-range-thumb {
     </div>
     <div class="field-group">
       <label class="field-label" for="existing_conditions" data-i18n="conditions_label">Conditions médicales présentes</label>
-      <textarea id="existing_conditions" name="existing_conditions" required rows="2"></textarea>
+      <textarea id="existing_conditions" name="existing_conditions" rows="2"></textarea>
     </div>
     <div class="field-group">
       <label class="field-label" for="current_medications" data-i18n="medications_label">Médicaments actuels : nom(s) et dosage(s)</label>
-      <textarea id="current_medications" name="current_medications" required rows="2"></textarea>
+      <textarea id="current_medications" name="current_medications" rows="2"></textarea>
     </div>
     <div class="field-grid-2">
       <div class="field-group">
@@ -581,7 +581,7 @@ input[type="range"]::-moz-range-thumb {
 
   <!-- SECTION C: INSTRUCTIONS (static display) -->
   <section class="form-section">
-    <div class="section-eyebrow" data-i18n="sc_section">C — COMMENT RÉPONDRE</div>
+    <div class="section-eyebrow" data-i18n="sc_section">B — COMMENT RÉPONDRE</div>
     <p class="field-label" style="font-weight: 500; font-size: 14px;" data-i18n="sc_instruction">Comparez votre ressenti actuel avec celui d'AVANT le début de JuvionHS-001™, puis cochez une case par ligne.</p>
     <p class="field-hint" data-i18n="sc_hint">Répondez en vous basant sur votre expérience réelle au cours des 7 derniers jours. Amélioration, stabilité ou aggravation, toutes les réponses sont valides.</p>
     <div class="scale-legend-strip">
@@ -667,7 +667,7 @@ input[type="range"]::-moz-range-thumb {
 
   <!-- SECTION 13: COMPLIANCE -->
   <section class="form-section">
-    <div class="section-eyebrow" data-i18n="s13_section">13 — CONFORMITÉ</div>
+    <div class="section-eyebrow" data-i18n="s13_section">11 — CONFORMITÉ</div>
     <div class="field-group">
       <p class="field-label" data-i18n="missed_label">Combien de doses avez-vous manquées ?</p>
       <div class="radio-list">
@@ -685,7 +685,7 @@ input[type="range"]::-moz-range-thumb {
 
   <!-- SECTION 11: SATISFACTION -->
   <section class="form-section">
-    <div class="section-eyebrow" data-i18n="s11_section">11 — SATISFACTION &amp; RECOMMANDATION</div>
+    <div class="section-eyebrow" data-i18n="s11_section">12 — SATISFACTION &amp; RECOMMANDATION</div>
     <div class="field-group">
       <p class="field-label" data-i18n="satisfaction_label">Satisfaction globale</p>
       <div class="radio-list">
@@ -721,19 +721,19 @@ input[type="range"]::-moz-range-thumb {
 
   <!-- SECTION 12: OBSERVATORY -->
   <section class="form-section">
-    <div class="section-eyebrow" data-i18n="s12_section">12 — REMARQUES</div>
+    <div class="section-eyebrow" data-i18n="s12_section">13 — REMARQUES</div>
     <p class="field-hint" data-i18n="s12_hint">Espace libre pour tout ce qui n'est pas couvert ci-dessus — changements inattendus, positifs comme négatifs.</p>
     <div class="field-group">
       <label class="field-label" for="unexpected_changes" data-i18n="unexpected_label">Changements inattendus remarqués</label>
-      <textarea id="unexpected_changes" name="unexpected_changes" required rows="3"></textarea>
+      <textarea id="unexpected_changes" name="unexpected_changes" rows="3"></textarea>
     </div>
     <div class="field-group">
       <label class="field-label" for="time_of_day_effect" data-i18n="time_label">Moment de la journée où l'effet est le plus marqué</label>
-      <input type="text" id="time_of_day_effect" name="time_of_day_effect" required>
+      <input type="text" id="time_of_day_effect" name="time_of_day_effect">
     </div>
     <div class="field-group">
       <label class="field-label" for="other_remarks" data-i18n="remarks_label">Autres remarques ou observations</label>
-      <textarea id="other_remarks" name="other_remarks" required rows="3"></textarea>
+      <textarea id="other_remarks" name="other_remarks" rows="3"></textarea>
     </div>
   </section>
 
@@ -766,12 +766,12 @@ const i18n = {
     smoking_opt_ex: "Ex-fumeur / ex-fumeuse", smoking_opt_current: "Fumeur / fumeuse actuelle",
     activity_label: "Niveau d'activité physique", activity_opt_sedentary: "Sédentaire",
     activity_opt_light: "Léger", activity_opt_moderate: "Modéré", activity_opt_vigorous: "Important",
-    sc_section: "C — COMMENT RÉPONDRE",
+    sc_section: "B — COMMENT RÉPONDRE",
     sc_instruction: "Comparez votre ressenti actuel avec celui d'AVANT le début de JuvionHS-001™, puis cochez une case par ligne.",
     sc_hint: "Répondez en vous basant sur votre expérience réelle au cours des 7 derniers jours. Amélioration, stabilité ou aggravation, toutes les réponses sont valides.",
     scale_m2: "Nettement pire", scale_m1: "Légèrement pire", scale_0: "Aucun changement",
     scale_p1: "Légèrement mieux", scale_p2: "Nettement mieux",
-    sd_section: "D — IMPRESSION GLOBALE DE CHANGEMENT",
+    sd_section: "C — IMPRESSION GLOBALE DE CHANGEMENT",
     sd_hint: "Par rapport à avant le début de JuvionHS-001™, mon état général est :",
     sd_q0: "Mon état général",
     s1_section: "1 — MOUVEMENT & MOBILITÉ",
@@ -807,11 +807,11 @@ const i18n = {
     cf_illness: "Maladie", cf_increased_stress: "Stress accru", cf_new_medication: "Nouveau médicament",
     cf_diet_change: "Changement d'alimentation", cf_poor_sleep: "Mauvais sommeil",
     cf_injury: "Blessure", cf_other: "Autre", cf_other_ph: "Précisez…",
-    s13_section: "13 — CONFORMITÉ",
+    s13_section: "11 — CONFORMITÉ",
     missed_label: "Combien de doses avez-vous manquées ?",
     missed_none: "Aucune", missed_1_2: "1–2", missed_3_5: "3–5", missed_more5: "Plus de 5",
     compliance_label: "Observance estimée (%)", reason_label: "Raison des doses manquées",
-    s11_section: "11 — SATISFACTION & RECOMMANDATION",
+    s11_section: "12 — SATISFACTION & RECOMMANDATION",
     satisfaction_label: "Satisfaction globale",
     sat_very_dis: "Très insatisfait·e", sat_dis: "Insatisfait·e", sat_neutral: "Neutre",
     sat_sat: "satisfait·e", sat_very_sat: "Très satisfait·e",
@@ -820,7 +820,7 @@ const i18n = {
     cont_prob_yes: "Probablement oui", cont_def_yes: "Certainement oui",
     nps_label: "Le recommanderiez-vous ? (0 = pas du tout, 10 = tout à fait)",
     nps_min: "0 — Pas du tout", nps_max: "10 — Tout à fait",
-    s12_section: "12 — REMARQUES",
+    s12_section: "13 — REMARQUES",
     s12_hint: "Espace libre pour tout ce qui n'est pas couvert ci-dessus — changements inattendus, positifs comme négatifs.",
     unexpected_label: "Changements inattendus remarqués",
     time_label: "Moment de la journée où l'effet est le plus marqué",
@@ -846,12 +846,12 @@ const i18n = {
     smoking_opt_ex: "Ex-smoker", smoking_opt_current: "Current smoker",
     activity_label: "Physical activity level", activity_opt_sedentary: "Sedentary",
     activity_opt_light: "Light", activity_opt_moderate: "Moderate", activity_opt_vigorous: "Vigorous",
-    sc_section: "C — HOW TO ANSWER",
+    sc_section: "B — HOW TO ANSWER",
     sc_instruction: "Compare how you feel NOW to BEFORE starting JuvionHS-001™, then tick one box per line.",
     sc_hint: "Answer based on your actual experience over the past seven days. Improvement, no change, or worsening are all equally valid.",
     scale_m2: "Much worse", scale_m1: "Slightly worse", scale_0: "No change",
     scale_p1: "Slightly better", scale_p2: "Much better",
-    sd_section: "D — GLOBAL IMPRESSION OF CHANGE",
+    sd_section: "C — GLOBAL IMPRESSION OF CHANGE",
     sd_hint: "Compared with before starting JuvionHS-001™, my overall condition is:",
     sd_q0: "My overall condition",
     s1_section: "1 — MOVEMENT & MOBILITY",
@@ -887,11 +887,11 @@ const i18n = {
     cf_illness: "Illness", cf_increased_stress: "Increased stress", cf_new_medication: "New medication",
     cf_diet_change: "Change in diet", cf_poor_sleep: "Poor sleep",
     cf_injury: "Injury", cf_other: "Other", cf_other_ph: "Please specify…",
-    s13_section: "13 — COMPLIANCE",
+    s13_section: "11 — COMPLIANCE",
     missed_label: "How many doses did you miss?",
     missed_none: "None", missed_1_2: "1–2", missed_3_5: "3–5", missed_more5: "More than 5",
     compliance_label: "Estimated compliance (%)", reason_label: "Reason for missed doses",
-    s11_section: "11 — SATISFACTION & RECOMMENDATION",
+    s11_section: "12 — SATISFACTION & RECOMMENDATION",
     satisfaction_label: "Overall satisfaction",
     sat_very_dis: "Very dissatisfied", sat_dis: "Dissatisfied", sat_neutral: "Neutral",
     sat_sat: "Satisfied", sat_very_sat: "Very satisfied",
@@ -900,7 +900,7 @@ const i18n = {
     cont_prob_yes: "Probably yes", cont_def_yes: "Definitely yes",
     nps_label: "Would you recommend it? (0 = not at all, 10 = absolutely)",
     nps_min: "0 — Not at all", nps_max: "10 — Absolutely",
-    s12_section: "12 — COMMENTS",
+    s12_section: "13 — COMMENTS",
     s12_hint: "Free space for anything not covered above — unexpected changes, positive or negative.",
     unexpected_label: "Any unexpected changes you noticed",
     time_label: "Time of day when the effect is most noticeable",
