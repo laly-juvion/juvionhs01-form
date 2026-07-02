@@ -482,20 +482,8 @@ input[type="range"]::-moz-range-thumb {
   <input type="hidden" name="language" id="lang-field" value="fr">
   <input type="hidden" name="_subject" value="JuvionHS-001™ Follow-up">
 
-  <!-- ACTIVATION + ASSESSMENT POINT -->
+  <!-- ASSESSMENT POINT -->
   <section class="form-section" style="padding-top: 8px;">
-    <div class="section-eyebrow" data-i18n="activation_section">ACTIVATION</div>
-    <div class="field-group">
-      <label class="field-label" data-i18n="activation_label">Code d'activation</label>
-      <p class="field-hint" data-i18n="activation_hint">Scannez le QR code ou entrez votre code d'activation (3 parties)</p>
-      <div class="activation-row">
-        <input type="text" name="activation_1" class="activation-input" required maxlength="6" autocomplete="off" spellcheck="false">
-        <span class="activation-sep">—</span>
-        <input type="text" name="activation_2" class="activation-input" required maxlength="6" autocomplete="off" spellcheck="false">
-        <span class="activation-sep">—</span>
-        <input type="text" name="activation_3" class="activation-input" required maxlength="6" autocomplete="off" spellcheck="false">
-      </div>
-    </div>
     <div class="field-group">
       <p class="field-label" data-i18n="ap_section">Point de mesure</p>
       <p class="field-hint" data-i18n="ap_note">Complétez ce questionnaire pour chacun des jours suivants, pour visualiser les changements au cours du temps</p>
@@ -589,20 +577,7 @@ input[type="range"]::-moz-range-thumb {
     </div>
   </section>
 
-  <!-- SECTION B: PRODUCT INFO -->
-  <section class="form-section">
-    <div class="section-eyebrow" data-i18n="sb_section">B — INFORMATIONS PRODUIT</div>
-    <div class="field-grid-2">
-      <div class="field-group">
-        <label class="field-label" for="batch_number" data-i18n="batch_label">Numéro de lot</label>
-        <input type="text" id="batch_number" name="batch_number" required autocomplete="off">
-      </div>
-      <div class="field-group">
-        <label class="field-label" for="expiry_date" data-i18n="expiry_label">Date de péremption</label>
-        <input type="date" id="expiry_date" name="expiry_date" required>
-      </div>
-    </div>
-  </section>
+  <!-- SECTION B: PRODUCT INFO (removed — batch number and expiry date removed) -->
 
   <!-- SECTION C: INSTRUCTIONS (static display) -->
   <section class="form-section">
@@ -776,9 +751,6 @@ input[type="range"]::-moz-range-thumb {
 const i18n = {
   fr: {
     title: "Formulaire de suivi JuvionHS-001™",
-    activation_section: "ACTIVATION",
-    activation_label: "Code d'activation",
-    activation_hint: "Scannez le QR code ou entrez votre code d'activation (3 parties)",
     ap_section: "Point de mesure",
     ap_note: "Complétez ce questionnaire pour chacun des jours suivants, pour visualiser les changements au cours du temps",
     ap_j0: "Référence (Jour 0)", ap_d5: "Jour 5", ap_d10: "Jour 10", ap_d20: "Jour 20", ap_j60: "Suivi (Jour 60)",
@@ -794,8 +766,6 @@ const i18n = {
     smoking_opt_ex: "Ex-fumeur / ex-fumeuse", smoking_opt_current: "Fumeur / fumeuse actuelle",
     activity_label: "Niveau d'activité physique", activity_opt_sedentary: "Sédentaire",
     activity_opt_light: "Léger", activity_opt_moderate: "Modéré", activity_opt_vigorous: "Important",
-    sb_section: "B — INFORMATIONS PRODUIT",
-    batch_label: "Numéro de lot", expiry_label: "Date de péremption",
     sc_section: "C — COMMENT RÉPONDRE",
     sc_instruction: "Comparez votre ressenti actuel avec celui d'AVANT le début de JuvionHS-001™, puis cochez une case par ligne.",
     sc_hint: "Répondez en vous basant sur votre expérience réelle au cours des 7 derniers jours. Amélioration, stabilité ou aggravation, toutes les réponses sont valides.",
@@ -861,9 +831,6 @@ const i18n = {
   },
   en: {
     title: "JuvionHS-001™ Self-Assessment & Follow-up Form",
-    activation_section: "ACTIVATION",
-    activation_label: "Activation code",
-    activation_hint: "Scan the QR code or enter your 3-part activation code",
     ap_section: "Assessment point",
     ap_note: "Complete this questionnaire at each point to track changes over time.",
     ap_j0: "Baseline (Day 0)", ap_d5: "Day 5", ap_d10: "Day 10", ap_d20: "Day 20", ap_j60: "Follow-up (Day 60)",
@@ -879,8 +846,6 @@ const i18n = {
     smoking_opt_ex: "Ex-smoker", smoking_opt_current: "Current smoker",
     activity_label: "Physical activity level", activity_opt_sedentary: "Sedentary",
     activity_opt_light: "Light", activity_opt_moderate: "Moderate", activity_opt_vigorous: "Vigorous",
-    sb_section: "B — PRODUCT INFORMATION",
-    batch_label: "Batch number", expiry_label: "Expiry date",
     sc_section: "C — HOW TO ANSWER",
     sc_instruction: "Compare how you feel NOW to BEFORE starting JuvionHS-001™, then tick one box per line.",
     sc_hint: "Answer based on your actual experience over the past seven days. Improvement, no change, or worsening are all equally valid.",
