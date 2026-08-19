@@ -23,13 +23,17 @@ MIN_N_BOX — because a "mean" of one answer is just that person's dot.
 Two renderers share the same data and layout:
 
   * a static image (PNG/SVG/PDF) via matplotlib, for reports and slides;
-  * a self-contained, accessible HTML page with hover/focus tooltips, a
-    per-participant filter, light & dark themes and a full data table.
+  * a self-contained, accessible HTML page with hover/focus tooltips, filters
+    for participants and assessment points, light & dark themes and a table.
+
+--days picks the assessment points drawn on load. The page additionally offers
+every other point the export holds, so a day can be added or dropped there
+without re-running the script; --only-these-days limits it to --days.
 
 Usage:
     python scripts/plot_satisfaction.py                     # image + HTML page
     python scripts/plot_satisfaction.py --format html
-    python scripts/plot_satisfaction.py --days 7 14 21 28 --theme dark --table
+    python scripts/plot_satisfaction.py --days 0 7 14 21 --theme dark --table
 """
 
 from __future__ import annotations
@@ -38,6 +42,7 @@ import argparse
 import csv
 import datetime as dt
 import html
+import json
 import math
 import re
 import sys
@@ -149,6 +154,19 @@ def parse_day(assessment_point: str) -> int | None:
     """'D14' -> 14, 'J0' -> 0. Anything unrecognised -> None."""
     match = re.fullmatch(r"[A-Za-z](\d+)", (assessment_point or "").strip())
     return int(match.group(1)) if match else None
+
+
+def day_label(day: int) -> str:
+    """Day 0 is the J0 baseline visit, not 'Day 0'."""
+    return "Baseline" if day == 0 else f"Day {day}"
+
+
+def days_in_csv(csv_path: Path) -> list[int]:
+    """Every assessment point the export actually contains, in time order."""
+    with csv_path.open(newline="", encoding="utf-8-sig") as handle:
+        found = {parse_day(row.get("assessment_point", ""))
+                 for row in csv.DictReader(handle)}
+    return sorted(day for day in found if day is not None)
 
 
 def section_score(row: dict, columns: list[str]) -> tuple[float, int] | None:
@@ -341,6 +359,8 @@ def lay_out_group(group: list[dict], series: dict[str, dict]) -> list[tuple[dict
 
 def build_figure(points: list[dict], days: list[int], participants: list[str],
                  theme_name: str):
+    """Draw `points` over `days`; `participants` is the full roster, which fixes
+    the colour each one gets whether or not they answered on a drawn day."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -388,7 +408,7 @@ def build_figure(points: list[dict], days: list[int], participants: list[str],
         ax.spines["bottom"].set_color(theme["grid"])
 
         ax.set_xticks(range(len(days)))
-        ax.set_xticklabels([f"Day {d}" for d in days])
+        ax.set_xticklabels([day_label(d) for d in days])
         ax.tick_params(axis="x", colors=theme["text_secondary"], length=0, pad=8)
         ax.tick_params(axis="y", colors=theme["text_secondary"], length=0, pad=6)
         ax.set_title(section_name, color=theme["text_primary"], fontsize=12,
@@ -437,14 +457,16 @@ def build_figure(points: list[dict], days: list[int], participants: list[str],
     axes[0].set_yticks(sorted(SCALE_LABELS))
     axes[0].set_yticklabels([SCALE_LABELS[value] for value in sorted(SCALE_LABELS)])
 
+    present = [pid for pid in participants
+               if any(point["participant"] == pid for point in points)]
     handles = [
         Line2D([], [], linestyle="none", marker=series[pid]["marker"], markersize=8,
                markerfacecolor=series[pid]["color"], markeredgecolor=theme["surface"],
                markeredgewidth=1.2, label=pid)
-        for pid in participants
+        for pid in present
     ]
     legend = fig.legend(
-        handles=handles, loc="lower center", ncol=min(len(participants), 9),
+        handles=handles, loc="lower center", ncol=min(len(present), 9),
         frameon=False, title="Participant",
         bbox_to_anchor=(0.5, 0.038), handletextpad=0.4, columnspacing=1.6,
     )
@@ -497,62 +519,74 @@ def _y(value: float) -> float:
     return PAD_T + (2.0 - value) / 4.0 * PLOT_H
 
 
-def marker_path(shape: str, cx: float, cy: float, r: float) -> str:
-    """SVG geometry for one marker, as an element without presentation attrs."""
-    def polygon(points: list[tuple[float, float]]) -> str:
-        coords = " ".join(f"{x:.2f},{y:.2f}" for x, y in points)
-        return f'<polygon points="{coords}"'
+def _marker_path_d(shape: str) -> str:
+    """Path data for one marker shape, unit radius, centred on the origin.
 
-    def star_points(spikes: int, outer: float, inner: float,
-                    rotation: float) -> list[tuple[float, float]]:
-        result = []
-        for step in range(spikes * 2):
-            radius = outer if step % 2 == 0 else inner
-            angle = rotation + step * math.pi / spikes
-            result.append((cx + radius * math.sin(angle),
-                           cy - radius * math.cos(angle)))
-        return result
+    Marks are placed by translating and scaling this path, so the Python and
+    JavaScript renderers draw from one definition instead of two.
+    """
+    def path(points: list[tuple[float, float]]) -> str:
+        head = f"M{points[0][0]:.3f},{points[0][1]:.3f}"
+        rest = "".join(f"L{x:.3f},{y:.3f}" for x, y in points[1:])
+        return head + rest + "Z"
 
     def regular(sides: int, rotation: float) -> list[tuple[float, float]]:
-        return [(cx + r * math.sin(rotation + i * 2 * math.pi / sides),
-                 cy - r * math.cos(rotation + i * 2 * math.pi / sides))
+        return [(math.sin(rotation + i * 2 * math.pi / sides),
+                 -math.cos(rotation + i * 2 * math.pi / sides))
                 for i in range(sides)]
 
+    def star(spikes: int, inner: float) -> list[tuple[float, float]]:
+        points = []
+        for step in range(spikes * 2):
+            radius = 1.25 if step % 2 == 0 else inner
+            angle = step * math.pi / spikes
+            points.append((radius * math.sin(angle), -radius * math.cos(angle)))
+        return points
+
     def cross(rotation: float) -> list[tuple[float, float]]:
-        arm, thick = r * 1.15, r * 0.42
+        arm, thick = 1.15, 0.42
         base = [(-thick, -arm), (thick, -arm), (thick, -thick), (arm, -thick),
                 (arm, thick), (thick, thick), (thick, arm), (-thick, arm),
                 (-thick, thick), (-arm, thick), (-arm, -thick), (-thick, -thick)]
         cos, sin = math.cos(rotation), math.sin(rotation)
-        return [(cx + x * cos - y * sin, cy + x * sin + y * cos) for x, y in base]
+        return [(x * cos - y * sin, x * sin + y * cos) for x, y in base]
 
-    if shape == "circle":
-        return f'<circle cx="{cx:.2f}" cy="{cy:.2f}" r="{r:.2f}"'
     if shape == "square":
-        side = r * 1.8
-        return (f'<rect x="{cx - side / 2:.2f}" y="{cy - side / 2:.2f}" '
-                f'width="{side:.2f}" height="{side:.2f}" rx="1.2"')
+        side = 0.9
+        return (f"M{-side:.3f},{-side:.3f}H{side:.3f}V{side:.3f}"
+                f"H{-side:.3f}Z")
     if shape == "triangle":
-        return polygon(regular(3, 0))
+        return path(regular(3, 0))
     if shape == "triangle-down":
-        return polygon(regular(3, math.pi))
+        return path(regular(3, math.pi))
     if shape == "triangle-left":
-        return polygon(regular(3, -math.pi / 2))
+        return path(regular(3, -math.pi / 2))
     if shape == "triangle-right":
-        return polygon(regular(3, math.pi / 2))
+        return path(regular(3, math.pi / 2))
     if shape == "diamond":
-        return polygon(regular(4, 0))
+        return path(regular(4, 0))
     if shape == "pentagon":
-        return polygon(regular(5, 0))
+        return path(regular(5, 0))
     if shape == "hexagon":
-        return polygon(regular(6, 0))
+        return path(regular(6, 0))
     if shape == "plus":
-        return polygon(cross(0))
+        return path(cross(0))
     if shape == "x":
-        return polygon(cross(math.pi / 4))
+        return path(cross(math.pi / 4))
     if shape == "star":
-        return polygon(star_points(5, r * 1.25, r * 0.55, 0))
-    return f'<circle cx="{cx:.2f}" cy="{cy:.2f}" r="{r:.2f}"'
+        return path(star(5, 0.55))
+    return "M-1,0A1,1 0 1,0 1,0A1,1 0 1,0 -1,0Z"          # circle
+
+
+MARKER_PATHS = {shape: _marker_path_d(shape) for shape in SHAPES}
+
+
+def marker_element(shape: str, cx: float, cy: float, radius: float,
+                   attrs: str = "") -> str:
+    """One marker, placed and sized; the stroke stays put under the scale."""
+    return (f'<path d="{MARKER_PATHS[shape]}" '
+            f'transform="translate({cx:.2f},{cy:.2f}) scale({radius:.2f})" '
+            f'vector-effect="non-scaling-stroke"{attrs}/>')
 
 
 def participant_var(index: int) -> str:
@@ -586,10 +620,11 @@ def participant_color_css(participants: list[str]) -> str:
 
 def legend_swatch(shape: str, color: str) -> str:
     """A 16x16 inline SVG of one participant's mark, for legend chips and table."""
-    body = marker_path(shape, 8, 8, 5)
+    body = marker_element(shape, 8, 8, 5,
+                          f' fill="{color}" stroke="var(--surface-1)" '
+                          f'stroke-width="1.2"')
     return (f'<svg class="swatch" viewBox="0 0 16 16" width="16" height="16" '
-            f'aria-hidden="true" focusable="false">{body} fill="{color}" '
-            f'stroke="var(--surface-1)" stroke-width="1.2"/></svg>')
+            f'aria-hidden="true" focusable="false">{body}</svg>')
 
 
 def render_panel_svg(section_name: str, days: list[int], series: dict[str, dict],
@@ -600,7 +635,7 @@ def render_panel_svg(section_name: str, days: list[int], series: dict[str, dict]
     spacing = (SLOT_SPAN / max(busiest, 1)) * group_width
     # Never shrink a mark below readability: past that point the slots overlap
     # slightly and the surface ring plus the shape difference keep them apart.
-    radius = max(3.5, min(5.0, spacing / 2 - 0.4))
+    radius = max(4.0, min(6.0, spacing / 2 - 0.4))
 
     parts: list[str] = []
 
@@ -630,7 +665,7 @@ def render_panel_svg(section_name: str, days: list[int], series: dict[str, dict]
         cx = PAD_L + (index + 0.5) * group_width
         parts.append(
             f'<text class="x-tick" x="{cx:.2f}" y="{VB_H - 14:.1f}" '
-            f'text-anchor="middle">Day {day}</text>'
+            f'text-anchor="middle">{html.escape(day_label(day))}</text>'
         )
         group = by_panel.get((section_name, day), [])
         if not group:
@@ -643,7 +678,7 @@ def render_panel_svg(section_name: str, days: list[int], series: dict[str, dict]
         # Group summary behind the individuals: box = interquartile range,
         # whiskers = min to max, heavy line = mean.
         summary = group_summary([p["score"] for p in group])
-        summary_tip = f"Day {day} · {section_name}: {summary_text(summary)}"
+        summary_tip = f"{day_label(day)} · {section_name}: {summary_text(summary)}"
         box_w, cap_w = BOX_SPAN * group_width, CAP_SPAN * group_width
         if summary["show_box"]:
             top, bottom = _y(summary["q3"]), _y(summary["q1"])
@@ -675,16 +710,16 @@ def render_panel_svg(section_name: str, days: list[int], series: dict[str, dict]
             style = series[pid]
             x = cx + offset * group_width
             y = _y(point["score"])
-            label = (f'{pid} · {section_name} · Day {day}: '
+            label = (f'{pid} · {section_name} · {day_label(day)}: '
                      f'{score_text(point["score"], point["answered"])}')
-            body = marker_path(style["shape"], x, y, radius)
-            parts.append(
-                f'{body} class="dot" fill="{style["css_color"]}" '
-                f'data-participant="{html.escape(pid, quote=True)}" '
-                f'data-tip="{html.escape(label, quote=True)}" '
-                f'tabindex="0" role="img" '
-                f'aria-label="{html.escape(label, quote=True)}"/>'
-            )
+            escaped = html.escape(label, quote=True)
+            parts.append(marker_element(
+                style["shape"], x, y, radius,
+                f' class="dot" fill="{style["css_color"]}"'
+                f' data-participant="{html.escape(pid, quote=True)}"'
+                f' data-tip="{escaped}" tabindex="0" role="img"'
+                f' aria-label="{escaped}"',
+            ))
 
     return (
         f'<svg class="panel-svg" viewBox="0 0 {vb_w:.0f} {VB_H:.0f}" '
@@ -694,8 +729,48 @@ def render_panel_svg(section_name: str, days: list[int], series: dict[str, dict]
     )
 
 
+def build_payload(points: list[dict], days: list[int], participants: list[str],
+                  series: dict[str, dict], busiest: int, vb_w: float) -> dict:
+    """Everything the page needs to redraw a panel for a different set of days.
+
+    The browser reuses the geometry constants and the marker paths rather than
+    carrying a second copy of them, so a toggled panel is laid out by the same
+    rules as the one Python rendered.
+    """
+    return {
+        "sections": [name for name, _ in SECTIONS],
+        "days": days,
+        "dayLabels": {str(day): day_label(day) for day in days},
+        "order": {pid: series[pid]["rank"] for pid in participants},
+        "shapes": {pid: series[pid]["shape"] for pid in participants},
+        "colors": {pid: series[pid]["css_color"] for pid in participants},
+        "paths": {series[pid]["shape"]: MARKER_PATHS[series[pid]["shape"]]
+                  for pid in participants},
+        "points": [
+            [point["participant"], point["day"], point["section"],
+             round(point["score"], 6), point["answered"],
+             score_text(point["score"], point["answered"])]
+            for point in points
+        ],
+        "geom": {
+            "vbW": vb_w, "vbH": VB_H, "padL": PAD_L, "padR": PAD_R,
+            "padT": PAD_T, "plotH": PLOT_H, "slotSpan": SLOT_SPAN,
+            "boxSpan": BOX_SPAN, "capSpan": CAP_SPAN,
+            "minMean": MIN_N_MEAN, "minBox": MIN_N_BOX, "busiest": busiest,
+        },
+    }
+
+
+def day_attrs(day: int, visible: set[int], extra: str = "") -> str:
+    """Mark a table cell with its day so the day filter can collapse the column."""
+    classes = ["day-cell"] + ([] if day in visible else ["day-off"])
+    if extra:
+        classes.append(extra)
+    return f' class="{" ".join(classes)}" data-day="{day}"'
+
+
 def render_tables(points: list[dict], days: list[int], participants: list[str],
-                  series: dict[str, dict]) -> str:
+                  series: dict[str, dict], visible: set[int]) -> str:
     by_key = index_points(points)
     summaries = summaries_by_group(points)
     blocks: list[str] = []
@@ -705,14 +780,17 @@ def render_tables(points: list[dict], days: list[int], participants: list[str],
             cells = []
             has_value = False
             for day in days:
+                attrs = day_attrs(day, visible)
                 point = by_key.get((pid, day, section_name))
                 if point is None:
-                    cells.append('<td class="na"><span aria-hidden="true">–</span>'
+                    cells.append(f'<td{day_attrs(day, visible, "na")}>'
+                                 '<span aria-hidden="true">–</span>'
                                  '<span class="sr-only">no answer</span></td>')
                 else:
                     has_value = True
                     cells.append(
-                        f'<td>{html.escape(score_text(point["score"], point["answered"]))}</td>'
+                        f'<td{attrs}>'
+                        f'{html.escape(score_text(point["score"], point["answered"]))}</td>'
                     )
             if has_value:
                 swatch = legend_swatch(series[pid]["shape"], series[pid]["css_color"])
@@ -724,19 +802,25 @@ def render_tables(points: list[dict], days: list[int], participants: list[str],
         # The group mean, spelled out — the same number the heavy line draws.
         mean_cells = []
         for day in days:
+            attrs = day_attrs(day, visible)
             summary = summaries.get((section_name, day))
             if summary is None:
-                mean_cells.append('<td class="na"><span aria-hidden="true">–</span>'
+                mean_cells.append(f'<td{day_attrs(day, visible, "na")}>'
+                                  '<span aria-hidden="true">–</span>'
                                   '<span class="sr-only">no answers</span></td>')
             else:
                 mean_cells.append(
-                    f'<td>{summary["mean"]:+.2f} '
+                    f'<td{attrs}>{summary["mean"]:+.2f} '
                     f'<span class="note">(n = {summary["n"]})</span></td>'
                 )
         footer = ('<tfoot><tr><th scope="row">Group mean</th>'
                   + "".join(mean_cells) + "</tr></tfoot>")
 
-        headers = "".join(f'<th scope="col">Day {day}</th>' for day in days)
+        headers = "".join(
+            f'<th scope="col"{day_attrs(day, visible)}>'
+            f'{html.escape(day_label(day))}</th>'
+            for day in days
+        )
         question_note = (f"mean of {len(columns)} questions" if len(columns) > 1
                          else "1 question")
         blocks.append(
@@ -842,6 +926,9 @@ h2 { font-size: 16px; margin: 40px 0 12px; font-weight: 650; }
 .chip:hover { background: var(--surface-2); }
 .chip[aria-pressed="false"] { opacity: 0.45; }
 .chip.plain { padding: 5px 11px; }
+.chip-note { color: var(--text-muted); font-size: 12px; }
+.controls + .controls { margin-top: -2px; }
+.day-cell.day-off { display: none; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .panels {
@@ -932,12 +1019,17 @@ HTML_SCRIPT = """
   }
   function hideTip() { tooltip.setAttribute('data-open', 'false'); }
 
-  document.querySelectorAll('[data-tip]').forEach(function (mark) {
-    mark.addEventListener('pointerenter', function () { showTip(mark); });
-    mark.addEventListener('pointerleave', hideTip);
-    mark.addEventListener('focus', function () { showTip(mark); });
-    mark.addEventListener('blur', hideTip);
-  });
+  function bindTips() {
+    document.querySelectorAll('[data-tip]').forEach(function (mark) {
+      if (mark.dataset.tipBound) { return; }
+      mark.dataset.tipBound = '1';
+      mark.addEventListener('pointerenter', function () { showTip(mark); });
+      mark.addEventListener('pointerleave', hideTip);
+      mark.addEventListener('focus', function () { showTip(mark); });
+      mark.addEventListener('blur', hideTip);
+    });
+  }
+  bindTips();
   window.addEventListener('scroll', hideTip, true);
   document.addEventListener('keydown', function (event) {
     if (event.key === 'Escape') { hideTip(); }
@@ -984,14 +1076,191 @@ HTML_SCRIPT = """
       toggle.setAttribute('aria-pressed', dark ? 'false' : 'true');
     });
   }
+
+  // ---- assessment points: add or drop a day, and redraw the panels ----------
+  var plot = window.__PLOT__;
+  var visible = plot.days.filter(function (day) {
+    return plot.visible.indexOf(day) !== -1;
+  });
+
+  function esc(text) {
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function fixed(value, places) {
+    var out = Math.abs(value).toFixed(places);
+    return (value < 0 ? '-' : '+') + out;
+  }
+  function yOf(value) {
+    var g = plot.geom;
+    return g.padT + (2 - value) / 4 * g.plotH;
+  }
+  function quantile(sorted, fraction) {
+    if (sorted.length === 1) { return sorted[0]; }
+    var pos = (sorted.length - 1) * fraction;
+    var lo = Math.floor(pos), hi = Math.ceil(pos);
+    if (lo === hi) { return sorted[lo]; }
+    return sorted[lo] * (1 - (pos - lo)) + sorted[hi] * (pos - lo);
+  }
+  function summarise(values) {
+    var sorted = values.slice().sort(function (a, b) { return a - b; });
+    var total = sorted.reduce(function (a, b) { return a + b; }, 0);
+    return {
+      n: sorted.length,
+      mean: total / sorted.length,
+      median: quantile(sorted, 0.5),
+      q1: quantile(sorted, 0.25),
+      q3: quantile(sorted, 0.75),
+      low: sorted[0],
+      high: sorted[sorted.length - 1]
+    };
+  }
+  function summaryText(s) {
+    var parts = ['mean ' + fixed(s.mean, 2)];
+    if (s.n >= plot.geom.minBox) {
+      parts.push('median ' + fixed(s.median, 2));
+      parts.push('IQR ' + fixed(s.q1, 2) + ' to ' + fixed(s.q3, 2));
+    }
+    parts.push('range ' + fixed(s.low, 2) + ' to ' + fixed(s.high, 2));
+    parts.push('n = ' + s.n);
+    return parts.join(' \\u00b7 ');
+  }
+
+  function drawPanel(section, days) {
+    var g = plot.geom;
+    var plotW = g.vbW - g.padL - g.padR;
+    var groupWidth = plotW / Math.max(days.length, 1);
+    var spacing = (g.slotSpan / Math.max(g.busiest, 1)) * groupWidth;
+    var radius = Math.max(4, Math.min(6, spacing / 2 - 0.4));
+    var out = [];
+
+    [2, 1, -1, -2].forEach(function (value) {
+      out.push('<line class="grid" x1="' + g.padL + '" x2="' + (g.padL + plotW) +
+               '" y1="' + yOf(value) + '" y2="' + yOf(value) + '"/>');
+    });
+    for (var i = 1; i < days.length; i++) {
+      var dx = g.padL + i * groupWidth;
+      out.push('<line class="divider" x1="' + dx + '" x2="' + dx + '" y1="' +
+               g.padT + '" y2="' + (g.padT + g.plotH) + '"/>');
+    }
+    out.push('<line class="zero" x1="' + g.padL + '" x2="' + (g.padL + plotW) +
+             '" y1="' + yOf(0) + '" y2="' + yOf(0) + '"/>');
+    [[2, '+2'], [1, '+1'], [0, '0'], [-1, '\\u22121'], [-2, '\\u22122']]
+      .forEach(function (pair) {
+        out.push('<text class="y-tick" x="' + (g.padL - 8) + '" y="' +
+                 (yOf(pair[0]) + 3.4) + '" text-anchor="end">' + pair[1] +
+                 '</text>');
+      });
+
+    days.forEach(function (day, index) {
+      var cx = g.padL + (index + 0.5) * groupWidth;
+      out.push('<text class="x-tick" x="' + cx + '" y="' + (g.vbH - 14) +
+               '" text-anchor="middle">' + esc(plot.dayLabels[day]) + '</text>');
+
+      var group = plot.points.filter(function (p) {
+        return p[2] === section && p[1] === day;
+      });
+      if (!group.length) {
+        out.push('<text class="empty" x="' + cx + '" y="' + (yOf(-2) - 4) +
+                 '" text-anchor="middle">no data yet</text>');
+        return;
+      }
+
+      var stats = summarise(group.map(function (p) { return p[3]; }));
+      var tip = esc(plot.dayLabels[day] + ' \\u00b7 ' + section + ': ' +
+                    summaryText(stats));
+      var boxW = g.boxSpan * groupWidth, capW = g.capSpan * groupWidth;
+      if (stats.n >= g.minBox) {
+        out.push('<line class="whisker" x1="' + cx + '" x2="' + cx + '" y1="' +
+                 yOf(stats.high) + '" y2="' + yOf(stats.low) + '"/>');
+        [stats.high, stats.low].forEach(function (value) {
+          out.push('<line class="whisker" x1="' + (cx - capW / 2) + '" x2="' +
+                   (cx + capW / 2) + '" y1="' + yOf(value) + '" y2="' +
+                   yOf(value) + '"/>');
+        });
+        out.push('<rect class="box" x="' + (cx - boxW / 2) + '" y="' +
+                 yOf(stats.q3) + '" width="' + boxW + '" height="' +
+                 Math.max(yOf(stats.q1) - yOf(stats.q3), 0.6) +
+                 '" rx="1.5" data-tip="' + tip + '"/>');
+      }
+      if (stats.n >= g.minMean) {
+        out.push('<line class="mean" x1="' + (cx - boxW / 2) + '" x2="' +
+                 (cx + boxW / 2) + '" y1="' + yOf(stats.mean) + '" y2="' +
+                 yOf(stats.mean) + '" data-tip="' + tip + '"/>');
+      }
+
+      group.sort(function (a, b) { return plot.order[a[0]] - plot.order[b[0]]; });
+      var slot = g.slotSpan / group.length;
+      group.forEach(function (point, rank) {
+        var pid = point[0];
+        var x = cx + (rank - (group.length - 1) / 2) * slot * groupWidth;
+        var label = esc(pid + ' \\u00b7 ' + section + ' \\u00b7 ' +
+                        plot.dayLabels[day] + ': ' + point[5]);
+        var off = hidden[pid] === true;
+        out.push('<path d="' + plot.paths[plot.shapes[pid]] + '" transform="' +
+                 'translate(' + x + ',' + yOf(point[3]) + ') scale(' + radius +
+                 ')" vector-effect="non-scaling-stroke" class="dot' +
+                 (off ? ' muted' : '') + '" fill="' + plot.colors[pid] +
+                 '" data-participant="' + esc(pid) + '" data-tip="' + label +
+                 '" tabindex="' + (off ? '-1' : '0') + '" role="img" ' +
+                 'aria-label="' + label + '"/>');
+      });
+    });
+    return out.join('');
+  }
+
+  function redrawPanels() {
+    document.querySelectorAll('.panel-svg').forEach(function (svg, index) {
+      svg.innerHTML = drawPanel(plot.sections[index], visible);
+    });
+    document.querySelectorAll('.day-cell').forEach(function (cell) {
+      var on = visible.indexOf(Number(cell.getAttribute('data-day'))) !== -1;
+      cell.classList.toggle('day-off', !on);
+    });
+    bindTips();
+    hideTip();
+  }
+
+  document.querySelectorAll('.chip[data-day]').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      var day = Number(chip.getAttribute('data-day'));
+      var at = visible.indexOf(day);
+      if (at === -1) {
+        visible.push(day);
+        visible.sort(function (a, b) { return a - b; });
+      } else if (visible.length > 1) {
+        visible.splice(at, 1);
+      } else {
+        return;                       // never leave the chart with no days
+      }
+      chip.setAttribute('aria-pressed', visible.indexOf(day) !== -1 ?
+                        'true' : 'false');
+      redrawPanels();
+    });
+  });
+  var dayReset = document.querySelector('.chip-days-reset');
+  if (dayReset) {
+    dayReset.addEventListener('click', function () {
+      visible = plot.days.slice();
+      document.querySelectorAll('.chip[data-day]').forEach(function (chip) {
+        chip.setAttribute('aria-pressed', 'true');
+      });
+      redrawPanels();
+    });
+  }
 })();
 """
 
 
-def render_html(points: list[dict], days: list[int], participants: list[str],
-                csv_path: Path) -> str:
-    """A self-contained page: same chart, plus tooltips, filter and a data table."""
+def render_html(points: list[dict], days: list[int], visible_days: list[int],
+                participants: list[str], csv_path: Path) -> str:
+    """A self-contained page: same chart, plus tooltips, filters and a table.
+
+    `days` is every assessment point the export holds; `visible_days` is the
+    subset drawn on load. The rest are one click away in the day filter.
+    """
     series = assign_series(participants, "light")
+    visible = set(visible_days)
 
     by_panel: dict[tuple[str, int], list[dict]] = defaultdict(list)
     for point in points:
@@ -1001,12 +1270,12 @@ def render_html(points: list[dict], days: list[int], participants: list[str],
     # day group get tight; the panels are drawn wider to match.
     busiest = max((len(group) for group in by_panel.values()), default=1)
     dense = " dense" if busiest > 5 else ""
+    vb_w = VB_W_WIDE if dense else VB_W
 
     panels = "".join(
         '<figure class="panel">'
         f'<figcaption>{html.escape(name)}</figcaption>'
-        + render_panel_svg(name, days, series, by_panel, busiest,
-                           VB_W_WIDE if dense else VB_W)
+        + render_panel_svg(name, visible_days, series, by_panel, busiest, vb_w)
         + "</figure>"
         for name, _ in SECTIONS
     )
@@ -1018,6 +1287,22 @@ def render_html(points: list[dict], days: list[int], participants: list[str],
         f'{html.escape(pid)}</button>'
         for pid in participants
     )
+
+    day_chips = "".join(
+        f'<button type="button" class="chip" '
+        f'aria-pressed="{"true" if day in visible else "false"}" '
+        f'data-day="{day}">{html.escape(day_label(day))}'
+        + ("" if any(p["day"] == day for p in points)
+           else '<span class="chip-note"> · empty</span>')
+        + "</button>"
+        for day in days
+    )
+
+    payload = json.dumps(
+        {**build_payload(points, days, participants, series, busiest, vb_w),
+         "visible": visible_days},
+        separators=(",", ":"), ensure_ascii=False,
+    ).replace("</", "<\\/")
 
     scale_key = "".join(
         f'<li><b>{html.escape(SCALE_LABELS[value].split("  ")[0])}</b> '
@@ -1041,14 +1326,19 @@ def render_html(points: list[dict], days: list[int], participants: list[str],
         f'box from {MIN_N_BOX}</li>',
     ])
 
+    shown_points = [point for point in points if point["day"] in visible]
+    shown_count = len(shown_points)
+    shown_people = len({point["participant"] for point in shown_points})
+
     generated = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
-    empty_days = [day for day in days
+    empty_days = [day for day in visible_days
                   if not any(p["day"] == day for p in points)]
     empty_note = ""
     if empty_days:
-        listed = ", ".join(f"day {day}" for day in empty_days)
+        listed = ", ".join(day_label(day).lower() for day in empty_days)
         empty_note = (f' No submissions yet for {html.escape(listed)}; '
-                      "those columns are kept so the timeline stays comparable.")
+                      "the column is kept so the timeline stays comparable, and "
+                      "can be dropped in the assessment point filter.")
 
     return f"""<!doctype html>
 <html lang="en">
@@ -1068,9 +1358,10 @@ def render_html(points: list[dict], days: list[int], participants: list[str],
   of everyone who answered that day, on the questionnaire's change scale with a
   reference line at 0 (no change). Sections built from several questions are
   shown as the mean of the answers given.{empty_note}</p>
-  <p class="meta">{len(points)} section scores from {len(participants)}
-  participants · source <code>{html.escape(csv_path.name)}</code>
-  · generated {generated}</p>
+  <p class="meta">{shown_count} section scores shown from {shown_people}
+  participants; {len(points)} in the export across all
+  {len(days)} assessment points · source
+  <code>{html.escape(csv_path.name)}</code> · generated {generated}</p>
 </header>
 
 <div class="controls">
@@ -1084,6 +1375,16 @@ def render_html(points: list[dict], days: list[int], participants: list[str],
   </button>
 </div>
 
+<div class="controls">
+  <div class="legend" role="group" aria-label="Show or hide assessment points">
+    <span class="legend-label">Assessment point</span>
+    {day_chips}
+    <button type="button" class="chip chip-days-reset plain">Show all</button>
+  </div>
+</div>
+<noscript><p class="meta">The assessment-point and participant filters need
+JavaScript; the data table below always shows every day.</p></noscript>
+
 <div class="panels{dense}">{panels}</div>
 
 <ul class="scale-key" aria-label="Scale">{scale_key}</ul>
@@ -1091,7 +1392,7 @@ def render_html(points: list[dict], days: list[int], participants: list[str],
 
 <h2 id="data-table">Data table</h2>
 <p class="meta">The same values in text, so nothing depends on colour alone.</p>
-<div class="tables">{render_tables(points, days, participants, series)}</div>
+<div class="tables">{render_tables(points, days, participants, series, visible)}</div>
 
 <footer>
   Hover or tab through a dot for its value; hover a box or a mean line for that
@@ -1099,10 +1400,12 @@ def render_html(points: list[dict], days: list[int], participants: list[str],
   all four sections. Hiding a participant does not recompute the summary — box
   and mean always cover everyone who answered that day. Those people differ from
   one day to the next, so read each day's summary on its own rather than as a
-  single cohort followed over time.
+  single cohort followed over time. Use the assessment-point filter to add a day
+  the study collected but the chart does not show by default, or to drop one.
 </footer>
 </div>
 <div class="tooltip" aria-hidden="true" data-open="false"></div>
+<script>window.__PLOT__ = {payload};</script>
 <script>{HTML_SCRIPT}</script>
 </body>
 </html>
@@ -1122,7 +1425,12 @@ def main() -> None:
     parser.add_argument("--out-html", type=Path, default=DEFAULT_OUT_HTML,
                         help="HTML page output path")
     parser.add_argument("--days", type=int, nargs="+", default=DEFAULT_DAYS,
-                        metavar="DAY", help="assessment days to show")
+                        metavar="DAY",
+                        help="assessment days shown by default (day 0 is the "
+                             "J0 baseline)")
+    parser.add_argument("--only-these-days", action="store_true",
+                        help="leave every other assessment point out of the "
+                             "HTML page's day filter as well")
     parser.add_argument("--theme", choices=("light", "dark"), default="light",
                         help="theme for the static image (the page has both)")
     parser.add_argument("--table", action="store_true",
@@ -1133,17 +1441,28 @@ def main() -> None:
     if not args.csv.exists():
         sys.exit(f"CSV not found: {args.csv}")
 
-    points, participants = load_points(args.csv, args.days)
-    if not points:
-        sys.exit("No answers found for days " + ", ".join(str(d) for d in args.days))
+    shown = sorted(set(args.days))
+    # The page offers every assessment point the export holds, not only the ones
+    # drawn on load, so a day can be added without re-running the script.
+    offered = shown if args.only_these_days else sorted(
+        set(shown) | set(days_in_csv(args.csv))
+    )
+
+    points, participants = load_points(args.csv, offered)
+    shown_points = [point for point in points if point["day"] in set(shown)]
+    if not shown_points:
+        sys.exit("No answers found for days " + ", ".join(str(d) for d in shown))
+    shown_participants = sorted(
+        {point["participant"] for point in shown_points}, key=participant_sort_key
+    )
 
     if args.table:
-        print_table(points, args.days, participants)
+        print_table(shown_points, shown, shown_participants)
 
     written: list[Path] = []
 
     if args.format in ("png", "both"):
-        figure = build_figure(points, args.days, participants, args.theme)
+        figure = build_figure(shown_points, shown, participants, args.theme)
         import matplotlib.pyplot as plt  # after build_figure has selected Agg
 
         args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -1154,11 +1473,18 @@ def main() -> None:
     if args.format in ("html", "both"):
         args.out_html.parent.mkdir(parents=True, exist_ok=True)
         args.out_html.write_text(
-            render_html(points, args.days, participants, args.csv), encoding="utf-8"
+            render_html(points, offered, shown, participants, args.csv),
+            encoding="utf-8",
         )
         written.append(args.out_html)
 
-    print(f"\n{len(points)} section scores from {len(participants)} participants")
+    print(f"\n{len(shown_points)} section scores from "
+          f"{len(shown_participants)} participants on "
+          + ", ".join(day_label(day).lower() for day in shown))
+    if offered != shown:
+        extra = [day for day in offered if day not in set(shown)]
+        print("  page also offers " +
+              ", ".join(day_label(day).lower() for day in extra))
     for path in written:
         print(f"  -> {path}")
 
