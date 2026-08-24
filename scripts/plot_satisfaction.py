@@ -46,6 +46,7 @@ import json
 import math
 import re
 import sys
+import textwrap
 from collections import defaultdict
 from pathlib import Path
 
@@ -154,6 +155,11 @@ def parse_day(assessment_point: str) -> int | None:
     """'D14' -> 14, 'J0' -> 0. Anything unrecognised -> None."""
     match = re.fullmatch(r"[A-Za-z](\d+)", (assessment_point or "").strip())
     return int(match.group(1)) if match else None
+
+
+def slugify(name: str) -> str:
+    """'Mood & Well-being' -> 'mood_well_being', for per-section file names."""
+    return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_", name.lower())).strip("_")
 
 
 def day_label(day: int) -> str:
@@ -358,9 +364,15 @@ def lay_out_group(group: list[dict], series: dict[str, dict]) -> list[tuple[dict
 # ---------------------------------------------------------------- static image
 
 def build_figure(points: list[dict], days: list[int], participants: list[str],
-                 theme_name: str):
+                 theme_name: str,
+                 sections: list[tuple[str, list[str]]] | None = None,
+                 title: str | None = None):
     """Draw `points` over `days`; `participants` is the full roster, which fixes
-    the colour each one gets whether or not they answered on a drawn day."""
+    the colour each one gets whether or not they answered on a drawn day.
+
+    `sections` defaults to all of them side by side; pass a single one to get a
+    standalone figure for that section.
+    """
     import matplotlib
 
     matplotlib.use("Agg")
@@ -370,26 +382,30 @@ def build_figure(points: list[dict], days: list[int], participants: list[str],
 
     theme = THEMES[theme_name]
     series = assign_series(participants, theme_name)
+    panels_spec = sections if sections is not None else SECTIONS
 
     by_panel: dict[tuple[str, int], list[dict]] = defaultdict(list)
     for point in points:
         by_panel[(point["section"], point["day"])].append(point)
 
     # Keep the marks from overlapping in the busiest day group.
-    # ~61pt of drawing width per group at the default figure size.
     busiest = max((len(group) for group in by_panel.values()), default=1)
-    spacing_pt = (SLOT_SPAN / max(busiest, 1)) * 61.0
+
+    width = 7.2 if len(panels_spec) == 1 else 4.1 * len(panels_spec)
+    fig, axes = plt.subplots(
+        1, len(panels_spec), figsize=(width, 6.4), sharey=True, squeeze=False,
+    )
+    axes = list(axes[0])
+    fig.patch.set_facecolor(theme["surface"])
+
+    # The drawing width per day group drives how large a mark can be without
+    # colliding with its neighbour.
+    group_pt = 61.0 * (width / max(len(panels_spec), 1)) / 4.1
+    spacing_pt = (SLOT_SPAN / max(busiest, 1)) * group_pt
     diameter = max(5.0, min(9.0, spacing_pt - 1.0))
     area = diameter ** 2
 
-    fig, axes = plt.subplots(
-        1, len(SECTIONS), figsize=(4.1 * len(SECTIONS), 6.4), sharey=True,
-    )
-    fig.patch.set_facecolor(theme["surface"])
-    if len(SECTIONS) == 1:
-        axes = [axes]
-
-    for ax, (section_name, _) in zip(axes, SECTIONS):
+    for ax, (section_name, _) in zip(axes, panels_spec):
         ax.set_facecolor(theme["surface"])
         ax.set_xlim(-0.62, len(days) - 0.38)
         ax.set_ylim(-2.45, 2.45)
@@ -411,8 +427,9 @@ def build_figure(points: list[dict], days: list[int], participants: list[str],
         ax.set_xticklabels([day_label(d) for d in days])
         ax.tick_params(axis="x", colors=theme["text_secondary"], length=0, pad=8)
         ax.tick_params(axis="y", colors=theme["text_secondary"], length=0, pad=6)
-        ax.set_title(section_name, color=theme["text_primary"], fontsize=12,
-                     fontweight="bold", pad=14)
+        if len(panels_spec) > 1:
+            ax.set_title(section_name, color=theme["text_primary"], fontsize=12,
+                         fontweight="bold", pad=14)
 
         for index, day in enumerate(days):
             group = by_panel.get((section_name, day), [])
@@ -491,16 +508,21 @@ def build_figure(points: list[dict], days: list[int], participants: list[str],
         text.set_color(theme["text_muted"])
     fig.add_artist(legend)
 
-    fig.suptitle("Change vs. before JuvionHS-001, by form section",
+    fig.suptitle(title or "Change vs. before JuvionHS-001, by form section",
                  color=theme["text_primary"], fontsize=15, fontweight="bold",
                  x=0.5, y=0.985)
-    fig.text(0.5, 0.937,
-             "One dot per participant per assessment point, over the summary of "
-             f"everyone who answered that day (mean from {MIN_N_MEAN} answers, "
-             f"box and whiskers from {MIN_N_BOX}).",
-             ha="center", color=theme["text_secondary"], fontsize=10)
+    subtitle = ("One dot per participant per assessment point, over the summary "
+                f"of everyone who answered that day (mean from {MIN_N_MEAN} "
+                f"answers, box and whiskers from {MIN_N_BOX}).")
+    if len(panels_spec) == 1:
+        # Narrow figure: break the line by hand so it keeps a margin.
+        subtitle = "\n".join(textwrap.wrap(subtitle, 62))
+    fig.text(0.5, 0.945, subtitle, ha="center", va="top",
+             color=theme["text_secondary"], fontsize=10)
 
-    fig.tight_layout(rect=(0.005, 0.115, 0.995, 0.915))
+    # A narrow figure wraps the subtitle onto a second line; leave room for it.
+    top = 0.915 if len(panels_spec) > 1 else 0.875
+    fig.tight_layout(rect=(0.005, 0.115, 0.995, top))
     return fig
 
 
@@ -1424,10 +1446,16 @@ def main() -> None:
                         help="image output path (.png, .svg, .pdf)")
     parser.add_argument("--out-html", type=Path, default=DEFAULT_OUT_HTML,
                         help="HTML page output path")
-    parser.add_argument("--days", type=int, nargs="+", default=DEFAULT_DAYS,
+    parser.add_argument("--days", nargs="+", default=[str(d) for d in DEFAULT_DAYS],
                         metavar="DAY",
                         help="assessment days shown by default (day 0 is the "
-                             "J0 baseline)")
+                             "J0 baseline); 'all' takes every day in the export")
+    parser.add_argument("--exclude", nargs="*", default=[], metavar="ID",
+                        help="participant ids to leave out entirely, e.g. a "
+                             "test submission")
+    parser.add_argument("--per-section", action="store_true",
+                        help="write one image per form section instead of one "
+                             "image with all four side by side")
     parser.add_argument("--only-these-days", action="store_true",
                         help="leave every other assessment point out of the "
                              "HTML page's day filter as well")
@@ -1441,14 +1469,33 @@ def main() -> None:
     if not args.csv.exists():
         sys.exit(f"CSV not found: {args.csv}")
 
-    shown = sorted(set(args.days))
+    in_csv = days_in_csv(args.csv)
+    if any(str(day).lower() == "all" for day in args.days):
+        shown = in_csv
+    else:
+        try:
+            shown = sorted({int(day) for day in args.days})
+        except ValueError:
+            sys.exit("--days takes whole numbers or 'all'")
+    if not shown:
+        sys.exit(f"No assessment points found in {args.csv.name}")
     # The page offers every assessment point the export holds, not only the ones
     # drawn on load, so a day can be added without re-running the script.
-    offered = shown if args.only_these_days else sorted(
-        set(shown) | set(days_in_csv(args.csv))
-    )
+    offered = shown if args.only_these_days else sorted(set(shown) | set(in_csv))
 
     points, participants = load_points(args.csv, offered)
+
+    dropped = set(args.exclude)
+    unknown = dropped - set(participants)
+    if unknown:
+        sys.exit("--exclude names participants that are not in the export: "
+                 + ", ".join(sorted(unknown)))
+    if dropped:
+        points = [point for point in points
+                  if point["participant"] not in dropped]
+        participants = [pid for pid in participants if pid not in dropped]
+        if not participants:
+            sys.exit("--exclude removed every participant")
     shown_points = [point for point in points if point["day"] in set(shown)]
     if not shown_points:
         sys.exit("No answers found for days " + ", ".join(str(d) for d in shown))
@@ -1462,13 +1509,26 @@ def main() -> None:
     written: list[Path] = []
 
     if args.format in ("png", "both"):
-        figure = build_figure(shown_points, shown, participants, args.theme)
-        import matplotlib.pyplot as plt  # after build_figure has selected Agg
-
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        figure.savefig(args.out, dpi=args.dpi, facecolor=figure.get_facecolor())
-        plt.close(figure)
-        written.append(args.out)
+        jobs: list[tuple[Path, list[tuple[str, list[str]]] | None, str | None]]
+        if args.per_section:
+            jobs = [
+                (args.out.with_name(
+                    f"{args.out.stem}_{slugify(name)}{args.out.suffix}"),
+                 [(name, columns)], name)
+                for name, columns in SECTIONS
+            ]
+        else:
+            jobs = [(args.out, None, None)]
+
+        for path, sections, title in jobs:
+            figure = build_figure(shown_points, shown, participants, args.theme,
+                                  sections=sections, title=title)
+            import matplotlib.pyplot as plt  # build_figure has selected Agg
+
+            figure.savefig(path, dpi=args.dpi, facecolor=figure.get_facecolor())
+            plt.close(figure)
+            written.append(path)
 
     if args.format in ("html", "both"):
         args.out_html.parent.mkdir(parents=True, exist_ok=True)
