@@ -391,7 +391,12 @@ def build_figure(points: list[dict], days: list[int], participants: list[str],
     # Keep the marks from overlapping in the busiest day group.
     busiest = max((len(group) for group in by_panel.values()), default=1)
 
-    width = 7.2 if len(panels_spec) == 1 else 4.1 * len(panels_spec)
+    # Grow with the number of day groups so the marks keep their size; the
+    # four-panel sheet is capped so it does not become a mural.
+    if len(panels_spec) == 1:
+        width = max(7.2, 1.2 * len(days) + 2.4)
+    else:
+        width = min(5.0, max(4.1, 0.5 * len(days) + 2.1)) * len(panels_spec)
     fig, axes = plt.subplots(
         1, len(panels_spec), figsize=(width, 6.4), sharey=True, squeeze=False,
     )
@@ -399,9 +404,11 @@ def build_figure(points: list[dict], days: list[int], participants: list[str],
     fig.patch.set_facecolor(theme["surface"])
 
     # The drawing width per day group drives how large a mark can be without
-    # colliding with its neighbour.
-    group_pt = 61.0 * (width / max(len(panels_spec), 1)) / 4.1
-    spacing_pt = (SLOT_SPAN / max(busiest, 1)) * group_pt
+    # colliding with its neighbour: panel width, less the axis margins, split
+    # across however many days are drawn.
+    panel_in = width / max(len(panels_spec), 1)
+    group_in = max(panel_in - 0.95, 0.4) / max(len(days), 1)
+    spacing_pt = (SLOT_SPAN / max(busiest, 1)) * group_in * 72.0
     diameter = max(5.0, min(9.0, spacing_pt - 1.0))
     area = diameter ** 2
 
@@ -482,8 +489,11 @@ def build_figure(points: list[dict], days: list[int], participants: list[str],
                markeredgewidth=1.2, label=pid)
         for pid in present
     ]
+    # Only as many legend columns as the figure is actually wide enough for.
+    ncol = max(1, min(len(present), 9, int(width // 0.95)))
+    legend_rows = math.ceil(len(present) / ncol) if present else 1
     legend = fig.legend(
-        handles=handles, loc="lower center", ncol=min(len(present), 9),
+        handles=handles, loc="lower center", ncol=ncol,
         frameon=False, title="Participant",
         bbox_to_anchor=(0.5, 0.038), handletextpad=0.4, columnspacing=1.6,
     )
@@ -520,9 +530,11 @@ def build_figure(points: list[dict], days: list[int], participants: list[str],
     fig.text(0.5, 0.945, subtitle, ha="center", va="top",
              color=theme["text_secondary"], fontsize=10)
 
-    # A narrow figure wraps the subtitle onto a second line; leave room for it.
+    # A narrow figure wraps the subtitle onto a second line; leave room for it,
+    # and for however many rows the participant legend needed.
     top = 0.915 if len(panels_spec) > 1 else 0.875
-    fig.tight_layout(rect=(0.005, 0.115, 0.995, top))
+    bottom = 0.115 + 0.040 * (legend_rows - 1)
+    fig.tight_layout(rect=(0.005, bottom, 0.995, top))
     return fig
 
 
@@ -1453,6 +1465,10 @@ def main() -> None:
     parser.add_argument("--exclude", nargs="*", default=[], metavar="ID",
                         help="participant ids to leave out entirely, e.g. a "
                              "test submission")
+    parser.add_argument("--alias", nargs="*", default=[], metavar="WRONG=RIGHT",
+                        help="fold a mistyped participant id into the right "
+                             "one, e.g. --alias Poo=P00 52=P52; the export is "
+                             "left untouched")
     parser.add_argument("--per-section", action="store_true",
                         help="write one image per form section instead of one "
                              "image with all four side by side")
@@ -1484,6 +1500,36 @@ def main() -> None:
     offered = shown if args.only_these_days else sorted(set(shown) | set(in_csv))
 
     points, participants = load_points(args.csv, offered)
+
+    aliases: dict[str, str] = {}
+    for pair in args.alias:
+        wrong, _, right = pair.partition("=")
+        if not wrong or not right:
+            sys.exit(f"--alias wants WRONG=RIGHT, got {pair!r}")
+        aliases[wrong] = right
+    stray = set(aliases) - set(participants)
+    if stray:
+        sys.exit("--alias names ids that are not in the export: "
+                 + ", ".join(sorted(stray)))
+    if aliases:
+        collisions = [
+            (wrong, right, day) for wrong, right in aliases.items()
+            for day in {p["day"] for p in points if p["participant"] == wrong}
+            if any(p["participant"] == right and p["day"] == day for p in points)
+        ]
+        if collisions:
+            # Two submissions for one person on one day is a data question, not
+            # something to average away silently.
+            sys.exit("--alias would collide — both ids answered the same day: "
+                     + "; ".join(f"{w} into {r} on {day_label(d).lower()}"
+                                 for w, r, d in collisions))
+        for point in points:
+            point["participant"] = aliases.get(point["participant"],
+                                               point["participant"])
+        participants = sorted(
+            {aliases.get(pid, pid) for pid in participants},
+            key=participant_sort_key,
+        )
 
     dropped = set(args.exclude)
     unknown = dropped - set(participants)
