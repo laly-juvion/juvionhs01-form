@@ -199,8 +199,42 @@ def score_text(score: float, answered: int) -> str:
     return f"{score:+.2f} (mean of {answered} answers)"
 
 
-def load_points(csv_path: Path, days: list[int]) -> tuple[list[dict], list[str]]:
-    """Return (points, participants) for the requested assessment days."""
+DUPLICATE_RULES = {
+    # A later submission supersedes an earlier one for the same visit.
+    "latest-submitted": lambda row: (row.get("_date", ""), row.get("date", "")),
+    # The visit recorded latest wins, whenever it was typed in.
+    "latest-visit": lambda row: (row.get("date", ""), row.get("_date", "")),
+}
+
+
+def dedupe_rows(rows: list[dict], rule: str) -> tuple[list[dict], list[dict]]:
+    """One submission per participant per assessment point.
+
+    A participant answering the same visit twice is a correction, not two
+    measurements: counting both would put two dots in one slot and weight that
+    person twice in the group summary. Returns (kept, dropped).
+    """
+    rank = DUPLICATE_RULES[rule]
+    best: dict[tuple[str, int | None], dict] = {}
+    dropped: list[dict] = []
+    for row in rows:
+        key = (row.get("participant_id", "").strip(),
+               parse_day(row.get("assessment_point", "")))
+        previous = best.get(key)
+        if previous is None:
+            best[key] = row
+        elif rank(row) > rank(previous):
+            best[key] = row
+            dropped.append(previous)
+        else:
+            dropped.append(row)
+    return list(best.values()), dropped
+
+
+def load_points(csv_path: Path, days: list[int],
+                duplicates: str = "latest-submitted",
+                ) -> tuple[list[dict], list[str], list[dict]]:
+    """Return (points, participants, dropped duplicates) for the given days."""
     with csv_path.open(newline="", encoding="utf-8-sig") as handle:
         rows = list(csv.DictReader(handle))
 
@@ -209,6 +243,7 @@ def load_points(csv_path: Path, days: list[int]) -> tuple[list[dict], list[str]]
         if missing:
             sys.exit(f"CSV is missing expected columns: {', '.join(sorted(missing))}")
 
+    rows, dropped = dedupe_rows(rows, duplicates)
     wanted = set(days)
     points: list[dict] = []
     participants: set[str] = set()
@@ -235,7 +270,9 @@ def load_points(csv_path: Path, days: list[int]) -> tuple[list[dict], list[str]]
                 "date": (row.get("date") or "").strip(),
             })
 
-    return points, sorted(participants, key=participant_sort_key)
+    return (points, sorted(participants, key=participant_sort_key),
+            [row for row in dropped
+             if parse_day(row.get("assessment_point", "")) in wanted])
 
 
 def index_points(points: list[dict]) -> dict[tuple[str, int, str], dict]:
@@ -1465,6 +1502,11 @@ def main() -> None:
     parser.add_argument("--exclude", nargs="*", default=[], metavar="ID",
                         help="participant ids to leave out entirely, e.g. a "
                              "test submission")
+    parser.add_argument("--duplicates", choices=tuple(DUPLICATE_RULES),
+                        default="latest-submitted",
+                        help="which row wins when a participant answered the "
+                             "same assessment point twice (default: the one "
+                             "submitted most recently)")
     parser.add_argument("--alias", nargs="*", default=[], metavar="WRONG=RIGHT",
                         help="fold a mistyped participant id into the right "
                              "one, e.g. --alias Poo=P00 52=P52; the export is "
@@ -1499,7 +1541,12 @@ def main() -> None:
     # drawn on load, so a day can be added without re-running the script.
     offered = shown if args.only_these_days else sorted(set(shown) | set(in_csv))
 
-    points, participants = load_points(args.csv, offered)
+    points, participants, duplicates = load_points(args.csv, offered,
+                                                  args.duplicates)
+    for row in duplicates:
+        print(f"  duplicate dropped: {row['participant_id'].strip()} "
+              f"{day_label(parse_day(row['assessment_point'])).lower()}, "
+              f"visit {row['date']}, submitted {row['_date'][:16]}")
 
     aliases: dict[str, str] = {}
     for pair in args.alias:
