@@ -5,9 +5,13 @@ REM
 REM The options below are the ones this study settles on; edit this line when
 REM they change:
 REM   --days all            every assessment point the export contains
-REM   --alias Poo=P00 ...   fold mistyped participant ids into the right one
 REM   --exclude Juvion-001  drop the test submission
-set OPTIONS=--days all --alias Poo=P00 52=P52 --exclude Juvion-001
+REM
+REM The Poo=P00 and 52=P52 aliases were removed 2026-09-07: the source data
+REM now uses the correct ids (P00, P52) directly, so folding them is no
+REM longer needed. If a similar typo shows up again, add it back here as
+REM --alias WRONG=RIGHT.
+set OPTIONS=--days all --exclude Juvion-001
 
 cd /d "%~dp0.."
 
