@@ -113,7 +113,7 @@ THEMES = {
         "panel_edge": "#eceae6",
         # The group summary stays neutral so colour keeps meaning "which
         # participant" and never doubles as "which statistic".
-        "box_fill": "#edece8",
+        "box_fill": "#fa962bb8",
         "box_edge": "#cbc9c3",
         "mean": "#3a3936",
     },
@@ -125,7 +125,7 @@ THEMES = {
         "grid": "#2f2f2c",
         "zero": "#5e5d57",
         "panel_edge": "#262625",
-        "box_fill": "#2a2a27",
+        "box_fill": "#fa962bb8",
         "box_edge": "#454440",
         "mean": "#dedcd2",
     },
@@ -946,7 +946,7 @@ HTML_STYLE = """
   --zero: #a9a7a0;
   --divider: #eceae6;
   --focus: #2a78d6;
-  --box-fill: #edece8;
+  --box-fill: #fa962bb8;
   --box-edge: #cbc9c3;
   --mean: #3a3936;
 }
@@ -962,7 +962,7 @@ HTML_STYLE = """
     --zero: #5e5d57;
     --divider: #262625;
     --focus: #3987e5;
-    --box-fill: #2a2a27;
+    --box-fill: #fa962bb8;
     --box-edge: #454440;
     --mean: #dedcd2;
   }
@@ -978,7 +978,7 @@ HTML_STYLE = """
   --zero: #5e5d57;
   --divider: #262625;
   --focus: #3987e5;
-  --box-fill: #2a2a27;
+  --box-fill: #fa962bb8;
   --box-edge: #454440;
   --mean: #dedcd2;
 }
@@ -1441,7 +1441,7 @@ def render_html(points: list[dict], days: list[int], visible_days: list[int],
                       "can be dropped in the assessment point filter.")
 
     return f"""<!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
