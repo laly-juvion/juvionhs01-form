@@ -191,13 +191,26 @@ def section_score(row: dict, columns: list[str]) -> tuple[float, int] | None:
     return sum(values) / len(values), len(values)
 
 
+# An id that is only an optional 'P' plus digits and the letter 'o' is read as
+# P<number> with two specific typos: the leading P dropped ('52'), and an 'o'
+# typed for a '0' ('Poo', autocorrect's favourite substitution for a P-number).
+# Anything with another letter in it — a real name, 'Juvion-001' — never
+# matches this shape and is left alone.
+_ID_LOOKS_LIKE_NUMBER = re.compile(r"[Pp]?[0-9oO]+")
+
+
 def normalize_participant_id(raw: str) -> str:
-    """'52' -> 'P52'. The form's id field is meant to read P<number>; a bare
-    number is the same typo every time (the leading P dropped), not a
-    different id, so it is corrected rather than tracked as its own person.
+    """'52' -> 'P52', 'Poo' -> 'P00'. See _ID_LOOKS_LIKE_NUMBER for the shape
+    this corrects; a different typo (transposed digits, a stray letter) still
+    needs --alias, same as before this existed.
     """
     pid = raw.strip()
-    return f"P{pid}" if re.fullmatch(r"\d+", pid) else pid
+    if not _ID_LOOKS_LIKE_NUMBER.fullmatch(pid):
+        return pid
+    body = pid[1:] if pid[:1] in ("P", "p") else pid
+    if not body:
+        return pid                         # bare "P" — nothing to normalize
+    return "P" + body.replace("o", "0").replace("O", "0")
 
 
 def score_text(score: float, answered: int) -> str:
