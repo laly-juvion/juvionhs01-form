@@ -191,6 +191,15 @@ def section_score(row: dict, columns: list[str]) -> tuple[float, int] | None:
     return sum(values) / len(values), len(values)
 
 
+def normalize_participant_id(raw: str) -> str:
+    """'52' -> 'P52'. The form's id field is meant to read P<number>; a bare
+    number is the same typo every time (the leading P dropped), not a
+    different id, so it is corrected rather than tracked as its own person.
+    """
+    pid = raw.strip()
+    return f"P{pid}" if re.fullmatch(r"\d+", pid) else pid
+
+
 def score_text(score: float, answered: int) -> str:
     """'+1 slightly better' for a plain answer, '+1.67 (mean of 3)' for a mean."""
     if abs(score - round(score)) < 1e-9:
@@ -242,6 +251,13 @@ def load_points(csv_path: Path, days: list[int],
         missing = {c for _, cols in SECTIONS for c in cols} - set(rows[0])
         if missing:
             sys.exit(f"CSV is missing expected columns: {', '.join(sorted(missing))}")
+
+    # Normalize before dedup, so a bare '52' collides with 'P52' as the same
+    # participant rather than surviving as a look-alike duplicate.
+    for row in rows:
+        row["participant_id"] = normalize_participant_id(
+            row.get("participant_id") or ""
+        )
 
     rows, dropped = dedupe_rows(rows, duplicates)
     wanted = set(days)
