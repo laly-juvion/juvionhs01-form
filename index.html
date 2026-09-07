@@ -544,8 +544,8 @@ input[type="range"]::-moz-range-thumb {
         <label class="field-label" for="participant_num" data-i18n="participant_id_label">Code participant</label>
         <div class="id-input">
           <span class="id-prefix" aria-hidden="true">P</span>
-          <input type="text" id="participant_num" inputmode="numeric" pattern="[0-9]{2}"
-                 maxlength="2" autocomplete="off" required aria-describedby="participant_id_hint">
+          <input type="text" id="participant_num" inputmode="numeric" pattern="[0-9]{2,3}"
+                 maxlength="3" autocomplete="off" required aria-describedby="participant_id_hint">
         </div>
         <p class="field-hint" id="participant_id_hint" data-i18n="participant_id_hint">Deux chiffres, ex. 07</p>
         <input type="hidden" id="participant_id" name="participant_id">
@@ -792,7 +792,7 @@ const i18n = {
     ap_note: "Complétez ce questionnaire pour chacun des jours suivants, pour visualiser les changements au cours du temps",
     ap_j0: "Référence (Jour 0)", ap_d7: "Jour 7", ap_d14: "Jour 14", ap_d21: "Jour 21", ap_d28: "Jour 28", ap_d42: "Jour 42", ap_d56: "Jour 56", ap_j60: "Suivi (Jour 60+)",
     sa_section: "A — INFORMATIONS PARTICIPANT",
-    participant_id_label: "Code participant", participant_id_hint: "Deux chiffres, ex. 07",
+    participant_id_label: "Code participant", participant_id_hint: "2 ou 3 chiffres, ex. 07 ou 128",
     participant_name_label: "Nom (facultatif)",
     date_label: "Date", age_group_label: "Tranche d'âge",
     age_opt_under30: "< 30 ans", age_opt_30_44: "30–44 ans", age_opt_45_59: "45–59 ans",
@@ -872,7 +872,7 @@ const i18n = {
     ap_note: "Complete this questionnaire at each point to track changes over time.",
     ap_j0: "Baseline (Day 0)", ap_d7: "Day 7", ap_d14: "Day 14", ap_d21: "Day 21", ap_d28: "Day 28", ap_d42: "Day 42", ap_d56: "Day 56", ap_j60: "Follow-up (Day 60+)",
     sa_section: "A — PARTICIPANT INFORMATION",
-    participant_id_label: "Participant ID", participant_id_hint: "Two digits, e.g. 07",
+    participant_id_label: "Participant ID", participant_id_hint: "2 or 3 digits, e.g. 07 or 128",
     participant_name_label: "Name (optional)",
     date_label: "Date", age_group_label: "Age group",
     age_opt_under30: "Under 30", age_opt_30_44: "30–44", age_opt_45_59: "45–59",
@@ -1097,7 +1097,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const participantNum = document.getElementById('participant_num');
   const participantId = document.getElementById('participant_id');
   const syncParticipantId = () => {
-    const digits = participantNum.value.replace(/\D/g, '').slice(0, 2);
+    const digits = participantNum.value.replace(/\D/g, '').slice(0, 3);
     if (digits !== participantNum.value) participantNum.value = digits;
     participantId.value = digits ? `P${digits}` : '';
   };
