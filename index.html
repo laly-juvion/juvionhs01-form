@@ -159,6 +159,42 @@ select {
   cursor: pointer;
 }
 
+/* ── PARTICIPANT ID ── */
+.id-input {
+  display: flex;
+  align-items: stretch;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.1s;
+  overflow: hidden;
+}
+.id-input:focus-within { border-color: var(--border-focus); }
+.id-prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 0 0 11px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  user-select: none;
+}
+.id-input input {
+  border: none;
+  border-radius: 0;
+  padding: 9px 11px 9px 3px;
+  width: 100%;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text);
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.id-input input:focus { outline: none; }
+
 /* ── GRID LAYOUTS ── */
 .field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .field-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
@@ -505,8 +541,14 @@ input[type="range"]::-moz-range-thumb {
     <div class="section-eyebrow" data-i18n="sa_section">A — INFORMATIONS PARTICIPANT</div>
     <div class="field-grid-2">
       <div class="field-group">
-        <label class="field-label" for="participant_id" data-i18n="participant_id_label">Code participant</label>
-        <input type="text" id="participant_id" name="participant_id" required autocomplete="off">
+        <label class="field-label" for="participant_num" data-i18n="participant_id_label">Code participant</label>
+        <div class="id-input">
+          <span class="id-prefix" aria-hidden="true">P</span>
+          <input type="text" id="participant_num" inputmode="numeric" pattern="[0-9]{2}"
+                 maxlength="2" autocomplete="off" required aria-describedby="participant_id_hint">
+        </div>
+        <p class="field-hint" id="participant_id_hint" data-i18n="participant_id_hint">Deux chiffres, ex. 07</p>
+        <input type="hidden" id="participant_id" name="participant_id">
       </div>
       <div class="field-group">
         <label class="field-label" for="participant_name" data-i18n="participant_name_label">Nom (facultatif)</label>
@@ -750,7 +792,8 @@ const i18n = {
     ap_note: "Complétez ce questionnaire pour chacun des jours suivants, pour visualiser les changements au cours du temps",
     ap_j0: "Référence (Jour 0)", ap_d7: "Jour 7", ap_d14: "Jour 14", ap_d21: "Jour 21", ap_d28: "Jour 28", ap_d42: "Jour 42", ap_d56: "Jour 56", ap_j60: "Suivi (Jour 60+)",
     sa_section: "A — INFORMATIONS PARTICIPANT",
-    participant_id_label: "Code participant", participant_name_label: "Nom (facultatif)",
+    participant_id_label: "Code participant", participant_id_hint: "Deux chiffres, ex. 07",
+    participant_name_label: "Nom (facultatif)",
     date_label: "Date", age_group_label: "Tranche d'âge",
     age_opt_under30: "< 30 ans", age_opt_30_44: "30–44 ans", age_opt_45_59: "45–59 ans",
     age_opt_60_74: "60–74 ans", age_opt_75plus: "75 ans et +",
@@ -829,7 +872,8 @@ const i18n = {
     ap_note: "Complete this questionnaire at each point to track changes over time.",
     ap_j0: "Baseline (Day 0)", ap_d7: "Day 7", ap_d14: "Day 14", ap_d21: "Day 21", ap_d28: "Day 28", ap_d42: "Day 42", ap_d56: "Day 56", ap_j60: "Follow-up (Day 60+)",
     sa_section: "A — PARTICIPANT INFORMATION",
-    participant_id_label: "Participant ID", participant_name_label: "Name (optional)",
+    participant_id_label: "Participant ID", participant_id_hint: "Two digits, e.g. 07",
+    participant_name_label: "Name (optional)",
     date_label: "Date", age_group_label: "Age group",
     age_opt_under30: "Under 30", age_opt_30_44: "30–44", age_opt_45_59: "45–59",
     age_opt_60_74: "60–74", age_opt_75plus: "75 and over",
@@ -1050,8 +1094,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('btn-submit');
   const status = document.getElementById('form-status');
 
+  const participantNum = document.getElementById('participant_num');
+  const participantId = document.getElementById('participant_id');
+  const syncParticipantId = () => {
+    const digits = participantNum.value.replace(/\D/g, '').slice(0, 2);
+    if (digits !== participantNum.value) participantNum.value = digits;
+    participantId.value = digits ? `P${digits}` : '';
+  };
+  participantNum.addEventListener('input', syncParticipantId);
+
   form.addEventListener('submit', async e => {
     e.preventDefault();
+    syncParticipantId();               // covers autofill, which skips 'input'
     btn.disabled = true;
     status.style.display = 'none';
     status.className = 'form-status';
