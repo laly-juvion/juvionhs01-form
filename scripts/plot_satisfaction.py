@@ -67,6 +67,12 @@ SECTIONS: list[tuple[str, list[str]]] = [
 
 DEFAULT_DAYS = [14, 28, 42, 56]
 
+# The form's last checkpoint, "Suivi (Jour 60+)" / "Follow-up (Day 60+)", is an
+# open-ended visit rather than a fixed day, submitted as assessment_point
+# "J60plus". It has no day number of its own, so it is pinned to one here -
+# after every other visit, with nothing else able to collide with it.
+FOLLOWUP_DAY = 60
+
 SCALE_LABELS = {
     2: "+2  much better",
     1: "+1  slightly better",
@@ -152,8 +158,11 @@ def participant_sort_key(pid: str):
 
 
 def parse_day(assessment_point: str) -> int | None:
-    """'D14' -> 14, 'J0' -> 0. Anything unrecognised -> None."""
-    match = re.fullmatch(r"[A-Za-z](\d+)", (assessment_point or "").strip())
+    """'D14' -> 14, 'J0' -> 0, 'J60plus' -> FOLLOWUP_DAY. Else -> None."""
+    raw = (assessment_point or "").strip()
+    if raw.lower() == "j60plus":
+        return FOLLOWUP_DAY
+    match = re.fullmatch(r"[A-Za-z](\d+)", raw)
     return int(match.group(1)) if match else None
 
 
@@ -163,8 +172,12 @@ def slugify(name: str) -> str:
 
 
 def day_label(day: int) -> str:
-    """Day 0 is the J0 baseline visit, not 'Day 0'."""
-    return "Baseline" if day == 0 else f"Day {day}"
+    """Day 0 is the J0 baseline visit; FOLLOWUP_DAY is the open-ended J60plus."""
+    if day == 0:
+        return "Baseline"
+    if day == FOLLOWUP_DAY:
+        return "Day 60+"
+    return f"Day {day}"
 
 
 def days_in_csv(csv_path: Path) -> list[int]:
@@ -462,7 +475,7 @@ def build_figure(points: list[dict], days: list[int], participants: list[str],
     if len(panels_spec) == 1:
         width = max(7.2, 1.2 * len(days) + 2.4)
     else:
-        width = min(5.0, max(4.1, 0.5 * len(days) + 2.1)) * len(panels_spec)
+        width = min(6.2, max(4.1, 0.58 * len(days) + 2.1)) * len(panels_spec)
     fig, axes = plt.subplots(
         1, len(panels_spec), figsize=(width, 6.4), sharey=True, squeeze=False,
     )
@@ -497,7 +510,10 @@ def build_figure(points: list[dict], days: list[int], participants: list[str],
         ax.spines["bottom"].set_color(theme["grid"])
 
         ax.set_xticks(range(len(days)))
-        ax.set_xticklabels([day_label(d) for d in days])
+        # A longer label set (the open-ended "Day 60+" among them) needs a
+        # smaller size to keep clearing its neighbours at the panel cap above.
+        tick_fontsize = 9 if len(days) > 6 else 10
+        ax.set_xticklabels([day_label(d) for d in days], fontsize=tick_fontsize)
         ax.tick_params(axis="x", colors=theme["text_secondary"], length=0, pad=8)
         ax.tick_params(axis="y", colors=theme["text_secondary"], length=0, pad=6)
         if len(panels_spec) > 1:
