@@ -69,8 +69,10 @@ DEFAULT_DAYS = [14, 28, 42, 56]
 
 # The form's last checkpoint, "Suivi (Jour 60+)" / "Follow-up (Day 60+)", is an
 # open-ended visit rather than a fixed day, submitted as assessment_point
-# "J60plus". It has no day number of its own, so it is pinned to one here -
-# after every other visit, with nothing else able to collide with it.
+# "J60plus" - and a participant can submit it again and again (P39 did so
+# weekly). Each submission is its own follow-up, numbered per participant in
+# order of submission: follow-up k sits at FOLLOWUP_DAY + k - 1, after every
+# fixed visit, where nothing else can collide with it.
 FOLLOWUP_DAY = 60
 
 SCALE_LABELS = {
@@ -158,10 +160,12 @@ def participant_sort_key(pid: str):
 
 
 def parse_day(assessment_point: str) -> int | None:
-    """'D14' -> 14, 'J0' -> 0, 'J60plus' -> FOLLOWUP_DAY. Else -> None."""
+    """'D14' -> 14, 'J0' -> 0, 'J60plus' -> FOLLOWUP_DAY, and 'J60plus#3' (the
+    third follow-up, as numbered by read_rows) -> FOLLOWUP_DAY + 2."""
     raw = (assessment_point or "").strip()
-    if raw.lower() == "j60plus":
-        return FOLLOWUP_DAY
+    followup = re.fullmatch(r"j60plus(?:#(\d+))?", raw, re.IGNORECASE)
+    if followup:
+        return FOLLOWUP_DAY + int(followup.group(1) or 1) - 1
     match = re.fullmatch(r"[A-Za-z](\d+)", raw)
     return int(match.group(1)) if match else None
 
@@ -175,16 +179,41 @@ def day_label(day: int) -> str:
     """Day 0 is the J0 baseline visit; FOLLOWUP_DAY is the open-ended J60plus."""
     if day == 0:
         return "Baseline"
-    if day == FOLLOWUP_DAY:
-        return "Day 60+"
+    if day >= FOLLOWUP_DAY:
+        return f"Day 60+ #{day - FOLLOWUP_DAY + 1}"
     return f"Day {day}"
+
+
+def read_rows(csv_path: Path) -> list[dict]:
+    """The export's rows, ids normalized and Day 60+ follow-ups numbered.
+
+    Repeated J60plus submissions are successive follow-ups, not duplicates:
+    each participant's are ordered by submission time (_date, then the visit
+    date) and relabelled J60plus#1, #2, ... so each lands in its own column.
+    """
+    with csv_path.open(newline="", encoding="utf-8-sig") as handle:
+        rows = list(csv.DictReader(handle))
+
+    followups: dict[str, list[dict]] = defaultdict(list)
+    for row in rows:
+        # Normalize first, so a bare '52' is the same participant as 'P52'
+        # for both the follow-up numbering and the de-duplication after it.
+        row["participant_id"] = normalize_participant_id(
+            row.get("participant_id") or ""
+        )
+        if (row.get("assessment_point") or "").strip().lower() == "j60plus":
+            followups[row["participant_id"]].append(row)
+    for visits in followups.values():
+        visits.sort(key=lambda row: (row.get("_date", ""), row.get("date", "")))
+        for number, row in enumerate(visits, start=1):
+            row["assessment_point"] = f"J60plus#{number}"
+    return rows
 
 
 def days_in_csv(csv_path: Path) -> list[int]:
     """Every assessment point the export actually contains, in time order."""
-    with csv_path.open(newline="", encoding="utf-8-sig") as handle:
-        found = {parse_day(row.get("assessment_point", ""))
-                 for row in csv.DictReader(handle)}
+    found = {parse_day(row.get("assessment_point", ""))
+             for row in read_rows(csv_path)}
     return sorted(day for day in found if day is not None)
 
 
@@ -270,21 +299,15 @@ def load_points(csv_path: Path, days: list[int],
                 duplicates: str = "latest-submitted",
                 ) -> tuple[list[dict], list[str], list[dict]]:
     """Return (points, participants, dropped duplicates) for the given days."""
-    with csv_path.open(newline="", encoding="utf-8-sig") as handle:
-        rows = list(csv.DictReader(handle))
+    rows = read_rows(csv_path)
 
     if rows:
         missing = {c for _, cols in SECTIONS for c in cols} - set(rows[0])
         if missing:
             sys.exit(f"CSV is missing expected columns: {', '.join(sorted(missing))}")
 
-    # Normalize before dedup, so a bare '52' collides with 'P52' as the same
-    # participant rather than surviving as a look-alike duplicate.
-    for row in rows:
-        row["participant_id"] = normalize_participant_id(
-            row.get("participant_id") or ""
-        )
-
+    # Follow-ups are already numbered apart, so only a fixed visit answered
+    # twice can still meet itself here.
     rows, dropped = dedupe_rows(rows, duplicates)
     wanted = set(days)
     points: list[dict] = []
@@ -383,7 +406,10 @@ def print_table(points: list[dict], days: list[int], participants: list[str]) ->
                 + [len(p) for p in participants]) + 2
     for section_name, _ in SECTIONS:
         print(f"\n{section_name}")
-        header = "participant".ljust(width) + "".join(f"D{d:<7}" for d in days)
+        header = "participant".ljust(width) + "".join(
+            (f"60+#{d - FOLLOWUP_DAY + 1}" if d >= FOLLOWUP_DAY else f"D{d}").ljust(8)
+            for d in days
+        )
         print(header)
         print("-" * len(header))
         for pid in participants:
@@ -513,7 +539,13 @@ def build_figure(points: list[dict], days: list[int], participants: list[str],
         # A longer label set (the open-ended "Day 60+" among them) needs a
         # smaller size to keep clearing its neighbours at the panel cap above.
         tick_fontsize = 9 if len(days) > 6 else 10
-        ax.set_xticklabels([day_label(d) for d in days], fontsize=tick_fontsize)
+        if len(days) > 8:
+            # Numbered Day 60+ follow-ups can add columns without bound; past
+            # what fits flat, slant the labels rather than let them overlap.
+            ax.set_xticklabels([day_label(d) for d in days], fontsize=tick_fontsize,
+                               rotation=40, ha="right", rotation_mode="anchor")
+        else:
+            ax.set_xticklabels([day_label(d) for d in days], fontsize=tick_fontsize)
         ax.tick_params(axis="x", colors=theme["text_secondary"], length=0, pad=8)
         ax.tick_params(axis="y", colors=theme["text_secondary"], length=0, pad=6)
         if len(panels_spec) > 1:
