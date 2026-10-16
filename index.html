@@ -366,7 +366,6 @@ input[type="range"]::-moz-range-thumb {
 /* ── RADIO LIST (compliance, satisfaction) ── */
 .radio-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 .radio-list-inline { flex-direction: row; gap: 20px; padding-top: 8px; }
-.field-row-inline { display: flex; flex-wrap: wrap; gap: 12px 32px; align-items: flex-start; }
 .field-row-inline .field-label { margin-top: 0; }
 .radio-item {
   display: flex;
@@ -558,7 +557,7 @@ input[type="range"]::-moz-range-thumb {
         <input type="text" id="participant_name" name="participant_name" autocomplete="name">
       </div>
     </div>
-    <div class="field-row-inline">
+    <div class="field-grid-2 field-row-inline">
       <div class="field-group" style="max-width: 200px;">
         <label class="field-label" for="date" data-i18n="date_label">Date</label>
         <input type="date" id="date" name="date" required>
