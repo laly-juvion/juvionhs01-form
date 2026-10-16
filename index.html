@@ -365,6 +365,9 @@ input[type="range"]::-moz-range-thumb {
 
 /* ── RADIO LIST (compliance, satisfaction) ── */
 .radio-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.radio-list-inline { flex-direction: row; gap: 20px; padding-top: 8px; }
+.field-row-inline { display: flex; flex-wrap: wrap; gap: 12px 32px; align-items: flex-start; }
+.field-row-inline .field-label { margin-top: 0; }
 .radio-item {
   display: flex;
   align-items: center;
@@ -555,9 +558,18 @@ input[type="range"]::-moz-range-thumb {
         <input type="text" id="participant_name" name="participant_name" autocomplete="name">
       </div>
     </div>
-    <div class="field-group" style="max-width: 200px;">
-      <label class="field-label" for="date" data-i18n="date_label">Date</label>
-      <input type="date" id="date" name="date" required>
+    <div class="field-row-inline">
+      <div class="field-group" style="max-width: 200px;">
+        <label class="field-label" for="date" data-i18n="date_label">Date</label>
+        <input type="date" id="date" name="date" required>
+      </div>
+      <div class="field-group">
+        <p class="field-label" id="sticks_low_label" data-i18n="sticks_low_label">Sticks restants ≤ 10 ?</p>
+        <div class="radio-list radio-list-inline" role="radiogroup" aria-labelledby="sticks_low_label">
+          <label class="radio-item"><input type="radio" name="sticks_remaining_10_or_less" value="yes" required><span data-i18n="sticks_yes">Oui</span></label>
+          <label class="radio-item"><input type="radio" name="sticks_remaining_10_or_less" value="no"><span data-i18n="sticks_no">Non</span></label>
+        </div>
+      </div>
     </div>
     <div class="field-grid-2">
       <div class="field-group">
@@ -795,6 +807,7 @@ const i18n = {
     participant_id_label: "Code participant", participant_id_hint: "2 ou 3 chiffres, ex. 07 ou 128",
     participant_name_label: "Nom (facultatif)",
     date_label: "Date", age_group_label: "Tranche d'âge",
+    sticks_low_label: "Sticks restants ≤ 10 ?", sticks_yes: "Oui", sticks_no: "Non",
     age_opt_under30: "< 30 ans", age_opt_30_44: "30–44 ans", age_opt_45_59: "45–59 ans",
     age_opt_60_74: "60–74 ans", age_opt_75plus: "75 ans et +",
     sex_label: "Sexe", sex_opt_f: "Féminin", sex_opt_m: "Masculin", sex_opt_other: "Autre / Non précisé",
@@ -875,6 +888,7 @@ const i18n = {
     participant_id_label: "Participant ID", participant_id_hint: "2 or 3 digits, e.g. 07 or 128",
     participant_name_label: "Name (optional)",
     date_label: "Date", age_group_label: "Age group",
+    sticks_low_label: "Sticks remaining ≤ 10?", sticks_yes: "Yes", sticks_no: "No",
     age_opt_under30: "Under 30", age_opt_30_44: "30–44", age_opt_45_59: "45–59",
     age_opt_60_74: "60–74", age_opt_75plus: "75 and over",
     sex_label: "Sex", sex_opt_f: "Female", sex_opt_m: "Male", sex_opt_other: "Other / Prefer not to say",
