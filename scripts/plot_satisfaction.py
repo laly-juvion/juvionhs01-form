@@ -210,6 +210,15 @@ def read_rows(csv_path: Path) -> list[dict]:
     return rows
 
 
+def short_day_label(day: int) -> str:
+    """Compact axis label for the trend overview: Start, D7, 60+ #2."""
+    if day == 0:
+        return "Start"
+    if day >= FOLLOWUP_DAY:
+        return f"60+ #{day - FOLLOWUP_DAY + 1}"
+    return f"D{day}"
+
+
 def days_in_csv(csv_path: Path) -> list[int]:
     """Every assessment point the export actually contains, in time order."""
     found = {parse_day(row.get("assessment_point", ""))
@@ -889,6 +898,7 @@ def build_payload(points: list[dict], days: list[int], participants: list[str],
         "sections": [name for name, _ in SECTIONS],
         "days": days,
         "dayLabels": {str(day): day_label(day) for day in days},
+        "shortLabels": {str(day): short_day_label(day) for day in days},
         "order": {pid: series[pid]["rank"] for pid in participants},
         "shapes": {pid: series[pid]["shape"] for pid in participants},
         "colors": {pid: series[pid]["css_color"] for pid in participants},
@@ -997,6 +1007,8 @@ HTML_STYLE = """
   --box-fill: #fa962bb8;
   --box-edge: #cbc9c3;
   --mean: #3a3936;
+  --trend-line: #ef7d1a;
+  --trend-band: rgba(250, 150, 43, 0.22);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -1013,6 +1025,8 @@ HTML_STYLE = """
     --box-fill: #fa962bb8;
     --box-edge: #454440;
     --mean: #dedcd2;
+    --trend-line: #f28a2e;
+    --trend-band: rgba(250, 150, 43, 0.28);
   }
 }
 :root[data-theme="dark"] {
@@ -1029,6 +1043,8 @@ HTML_STYLE = """
   --box-fill: #fa962bb8;
   --box-edge: #454440;
   --mean: #dedcd2;
+  --trend-line: #f28a2e;
+  --trend-band: rgba(250, 150, 43, 0.28);
 }
 
 * { box-sizing: border-box; }
@@ -1097,6 +1113,22 @@ h2 { font-size: 16px; margin: 40px 0 12px; font-weight: 650; }
 .zero { stroke: var(--zero); stroke-width: 1.6; }
 .y-tick, .x-tick { fill: var(--text-secondary); font-size: 10px; }
 .empty { fill: var(--text-muted); font-size: 9.5px; font-style: italic; }
+.trend { margin: 8px 0 28px; }
+.trend h2, .trend + h2 { margin-top: 18px; }
+.trend-grid { display: grid; gap: 18px 40px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 760px) { .trend-grid { grid-template-columns: minmax(0, 1fr); } }
+.trend-panel { margin: 0; }
+.trend-panel figcaption { font-weight: 700; font-size: 18px; margin: 0 0 4px; }
+.trend-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.trend-gridline { stroke: var(--grid); stroke-width: 1.5; }
+.trend-zero { stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.trend-tick, .trend-x { fill: var(--text-muted); font-size: 19px; }
+.trend-band { fill: var(--trend-band); stroke: none; }
+.trend-line { fill: none; stroke: var(--trend-line); stroke-width: 5;
+              stroke-linejoin: round; stroke-linecap: round; }
+.trend-dot { fill: var(--surface-1); stroke: var(--trend-line); stroke-width: 3.5;
+             cursor: pointer; }
+.trend-peak { fill: var(--text-primary); font-size: 22px; font-weight: 700; }
 .box { fill: var(--box-fill); stroke: var(--box-edge); stroke-width: 1; }
 .whisker { stroke: var(--box-edge); stroke-width: 1; }
 .mean { stroke: var(--mean); stroke-width: 2.4; stroke-linecap: round; }
@@ -1357,7 +1389,84 @@ HTML_SCRIPT = """
     return out.join('');
   }
 
+  // ---- trend overview: group mean over time, IQR band behind it ------------
+  var TW = 600, TH = 200, TL = 46, TR = 44, TT = 36, TB = 50;
+
+  function drawTrend(section, days) {
+    var g = plot.geom;
+    var steps = [];
+    days.forEach(function (day) {
+      var values = plot.points.filter(function (p) {
+        return p[2] === section && p[1] === day;
+      }).map(function (p) { return p[3]; });
+      if (values.length < g.minMean) { return; }
+      var s = summarise(values);
+      var boxed = s.n >= g.minBox;
+      steps.push({ day: day, s: s, lo: boxed ? s.q1 : s.mean,
+                   hi: boxed ? s.q3 : s.mean });
+    });
+    if (!steps.length) {
+      return '<text class="empty" x="' + TW / 2 + '" y="' + TH / 2 +
+             '" text-anchor="middle">not enough answers yet</text>';
+    }
+
+    var lo = Math.min(0, Math.min.apply(null, steps.map(function (t) { return t.lo; })));
+    var hi = Math.max(1, Math.max.apply(null, steps.map(function (t) { return t.hi; })));
+    var span = hi - lo;
+    function y(v) { return TT + (hi - v) / span * (TH - TT - TB); }
+    function x(i) {
+      return steps.length === 1 ? (TL + TW - TR) / 2
+           : TL + i * (TW - TL - TR) / (steps.length - 1);
+    }
+
+    var out = [];
+    for (var v = Math.ceil(lo); v <= Math.floor(hi); v++) {
+      if (v === 0) { continue; }
+      out.push('<line class="trend-gridline" x1="' + TL + '" x2="' + (TW - TR + 8) +
+               '" y1="' + y(v) + '" y2="' + y(v) + '"/>');
+      out.push('<text class="trend-tick" x="' + (TL - 12) + '" y="' + (y(v) + 6) +
+               '" text-anchor="end">' + (v > 0 ? '+' : '\\u2212') + Math.abs(v) +
+               '</text>');
+    }
+    out.push('<line class="trend-zero" x1="' + TL + '" x2="' + (TW - TR + 8) +
+             '" y1="' + y(0) + '" y2="' + y(0) + '"/>');
+    out.push('<text class="trend-tick" x="' + (TL - 12) + '" y="' + (y(0) + 6) +
+             '" text-anchor="end">0</text>');
+
+    var upper = steps.map(function (t, i) { return x(i) + ',' + y(t.hi); });
+    var lower = steps.map(function (t, i) { return x(i) + ',' + y(t.lo); }).reverse();
+    out.push('<polygon class="trend-band" points="' +
+             upper.concat(lower).join(' ') + '"/>');
+    out.push('<polyline class="trend-line" points="' +
+             steps.map(function (t, i) { return x(i) + ',' + y(t.s.mean); }).join(' ') +
+             '"/>');
+
+    var peak = 0;
+    steps.forEach(function (t, i) { if (t.s.mean >= steps[peak].s.mean) { peak = i; } });
+    steps.forEach(function (t, i) {
+      var tip = esc(plot.dayLabels[t.day] + ' \\u00b7 ' + section + ': ' +
+                    summaryText(t.s));
+      out.push('<circle class="trend-dot" cx="' + x(i) + '" cy="' + y(t.s.mean) +
+               '" r="6" data-tip="' + tip + '"/>');
+      out.push('<text class="trend-x" x="' + x(i) + '" y="' + (TH - 8) +
+               '" text-anchor="middle">' + esc(plot.shortLabels[t.day]) + '</text>');
+    });
+    var p = steps[peak];
+    out.push('<text class="trend-peak" x="' + x(peak) + '" y="' + (y(p.s.mean) - 14) +
+             '" text-anchor="middle">' + fixed(p.s.mean, 1) + '</text>');
+    return out.join('');
+  }
+
+  function redrawTrends() {
+    document.querySelectorAll('.trend-svg').forEach(function (svg, index) {
+      svg.innerHTML = drawTrend(plot.sections[index], visible);
+    });
+  }
+  redrawTrends();
+  bindTips();
+
   function redrawPanels() {
+    redrawTrends();
     document.querySelectorAll('.panel-svg').forEach(function (svg, index) {
       svg.innerHTML = drawPanel(plot.sections[index], visible);
     });
@@ -1425,6 +1534,16 @@ def render_html(points: list[dict], days: list[int], visible_days: list[int],
         f'<figcaption>{html.escape(name)}</figcaption>'
         + render_panel_svg(name, visible_days, series, by_panel, busiest, vb_w)
         + "</figure>"
+        for name, _ in SECTIONS
+    )
+
+    trends = "".join(
+        '<figure class="trend-panel">'
+        f'<figcaption>{html.escape(name)}</figcaption>'
+        f'<svg class="trend-svg" viewBox="0 0 600 200" role="img" '
+        f'aria-label="{html.escape(name, quote=True)}: average change over time; '
+        f'the values are in the data table below"></svg>'
+        '</figure>'
         for name, _ in SECTIONS
     )
 
@@ -1533,6 +1652,16 @@ def render_html(points: list[dict], days: list[int], visible_days: list[int],
 <noscript><p class="meta">The assessment-point and participant filters need
 JavaScript; the data table below always shows every day.</p></noscript>
 
+<section class="trend" aria-labelledby="trend-title">
+  <h2 id="trend-title">Average change over time</h2>
+  <p class="meta">Line: mean of everyone who answered that day. Band: the middle
+  half of their answers (interquartile range, from {MIN_N_BOX} answers). Days
+  with fewer than {MIN_N_MEAN} answers are left out, which is why single
+  Day 60+ follow-ups do not appear here.</p>
+  <div class="trend-grid">{trends}</div>
+</section>
+
+<h2>Every answer</h2>
 <div class="panels{dense}">{panels}</div>
 
 <ul class="scale-key" aria-label="Scale">{scale_key}</ul>
