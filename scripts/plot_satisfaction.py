@@ -1129,6 +1129,7 @@ h2 { font-size: 16px; margin: 40px 0 12px; font-weight: 650; }
 .trend-dot { fill: var(--surface-1); stroke: var(--trend-line); stroke-width: 3.5;
              cursor: pointer; }
 .trend-peak { fill: var(--text-primary); font-size: 22px; font-weight: 700; }
+.trend-svg .empty { font-size: 19px; }
 .box { fill: var(--box-fill); stroke: var(--box-edge); stroke-width: 1; }
 .whisker { stroke: var(--box-edge); stroke-width: 1; }
 .mean { stroke: var(--mean); stroke-width: 2.4; stroke-linecap: round; }
@@ -1318,6 +1319,7 @@ HTML_SCRIPT = """
   }
 
   function drawPanel(section, days) {
+    if (!days.length) { return noDaysMessage(); }
     var g = plot.geom;
     var plotW = g.vbW - g.padL - g.padR;
     var groupWidth = plotW / Math.max(days.length, 1);
@@ -1403,7 +1405,13 @@ HTML_SCRIPT = """
   // ---- trend overview: group mean over time, IQR band behind it ------------
   var TW = 600, TH = 200, TL = 46, TR = 44, TT = 36, TB = 50;
 
+  function noDaysMessage() {
+    return '<text class="empty" x="50%" y="50%" text-anchor="middle">' +
+           'Select an assessment point above</text>';
+  }
+
   function drawTrend(section, days) {
+    if (!days.length) { return noDaysMessage(); }
     var g = plot.geom;
     var steps = [];
     days.forEach(function (day) {
@@ -1512,6 +1520,17 @@ HTML_SCRIPT = """
       visible = plot.days.slice();
       document.querySelectorAll('.chip[data-day]').forEach(function (chip) {
         chip.setAttribute('aria-pressed', 'true');
+      });
+      redrawPanels();
+    });
+  }
+  // Drop every assessment point, so one can then be clicked back on.
+  var dayHideAll = document.querySelector('.chip-days-hide-all');
+  if (dayHideAll) {
+    dayHideAll.addEventListener('click', function () {
+      visible = [];
+      document.querySelectorAll('.chip[data-day]').forEach(function (chip) {
+        chip.setAttribute('aria-pressed', 'false');
       });
       redrawPanels();
     });
@@ -1659,6 +1678,7 @@ def render_html(points: list[dict], days: list[int], visible_days: list[int],
     <span class="legend-label">Assessment point</span>
     {day_chips}
     <button type="button" class="chip chip-days-reset plain">Show all</button>
+    <button type="button" class="chip chip-days-hide-all plain">Remove all</button>
   </div>
 </div>
 <noscript><p class="meta">The assessment-point and participant filters need
