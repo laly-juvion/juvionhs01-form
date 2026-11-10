@@ -1129,6 +1129,9 @@ h2 { font-size: 16px; margin: 40px 0 12px; font-weight: 650; }
 .trend-dot { fill: var(--surface-1); stroke: var(--trend-line); stroke-width: 3.5;
              cursor: pointer; }
 .trend-peak { fill: var(--text-primary); font-size: 22px; font-weight: 700; }
+.trend-line.thin { stroke-width: 3; stroke-dasharray: 7 6; opacity: 0.8; }
+.trend-dot.thin { stroke-width: 2.5; stroke-dasharray: 3 2.5; }
+.trend-n { fill: var(--text-muted); font-size: 15px; font-style: italic; }
 .trend-svg .empty { font-size: 19px; }
 .box { fill: var(--box-fill); stroke: var(--box-edge); stroke-width: 1; }
 .whisker { stroke: var(--box-edge); stroke-width: 1; }
@@ -1418,11 +1421,13 @@ HTML_SCRIPT = """
       var values = plot.points.filter(function (p) {
         return p[2] === section && p[1] === day;
       }).map(function (p) { return p[3]; });
-      if (values.length < g.minMean) { return; }
+      if (!values.length) { return; }
       var s = summarise(values);
       var boxed = s.n >= g.minBox;
-      steps.push({ day: day, s: s, lo: boxed ? s.q1 : s.mean,
-                   hi: boxed ? s.q3 : s.mean });
+      // Too few people for a group average: still drawn, but dashed, so one
+      // person's answer is never read as everyone's.
+      steps.push({ day: day, s: s, thin: s.n < g.minMean,
+                   lo: boxed ? s.q1 : s.mean, hi: boxed ? s.q3 : s.mean });
     });
     if (!steps.length) {
       return '<text class="empty" x="' + TW / 2 + '" y="' + TH / 2 +
@@ -1452,27 +1457,63 @@ HTML_SCRIPT = """
     out.push('<text class="trend-tick" x="' + (TL - 12) + '" y="' + (y(0) + 6) +
              '" text-anchor="end">0</text>');
 
-    var upper = steps.map(function (t, i) { return x(i) + ',' + y(t.hi); });
-    var lower = steps.map(function (t, i) { return x(i) + ',' + y(t.lo); }).reverse();
-    out.push('<polygon class="trend-band" points="' +
-             upper.concat(lower).join(' ') + '"/>');
-    out.push('<polyline class="trend-line" points="' +
-             steps.map(function (t, i) { return x(i) + ',' + y(t.s.mean); }).join(' ') +
-             '"/>');
+    // Band and solid line only over runs of days with a real group average.
+    var runs = [], run = [];
+    steps.forEach(function (t, i) {
+      if (t.thin) { if (run.length) { runs.push(run); run = []; } }
+      else { run.push(i); }
+    });
+    if (run.length) { runs.push(run); }
+    runs.forEach(function (r) {
+      var upper = r.map(function (i) { return x(i) + ',' + y(steps[i].hi); });
+      var lower = r.map(function (i) { return x(i) + ',' + y(steps[i].lo); }).reverse();
+      out.push('<polygon class="trend-band" points="' +
+               upper.concat(lower).join(' ') + '"/>');
+      if (r.length > 1) {
+        out.push('<polyline class="trend-line" points="' +
+                 r.map(function (i) { return x(i) + ',' + y(steps[i].s.mean); }).join(' ') +
+                 '"/>');
+      }
+    });
+    for (var k = 0; k + 1 < steps.length; k++) {
+      if (steps[k].thin || steps[k + 1].thin) {
+        out.push('<line class="trend-line thin" x1="' + x(k) + '" y1="' +
+                 y(steps[k].s.mean) + '" x2="' + x(k + 1) + '" y2="' +
+                 y(steps[k + 1].s.mean) + '"/>');
+      }
+    }
 
-    var peak = 0;
-    steps.forEach(function (t, i) { if (t.s.mean >= steps[peak].s.mean) { peak = i; } });
+    var peak = -1;
+    steps.forEach(function (t, i) {
+      if (!t.thin && (peak < 0 || t.s.mean >= steps[peak].s.mean)) { peak = i; }
+    });
     steps.forEach(function (t, i) {
       var tip = esc(plot.dayLabels[t.day] + ' \\u00b7 ' + section + ': ' +
-                    summaryText(t.s));
-      out.push('<circle class="trend-dot" cx="' + x(i) + '" cy="' + y(t.s.mean) +
-               '" r="6" data-tip="' + tip + '"/>');
-      out.push('<text class="trend-x" x="' + x(i) + '" y="' + (TH - 8) +
-               '" text-anchor="middle">' + esc(plot.shortLabels[t.day]) + '</text>');
+                    summaryText(t.s) +
+                    (t.thin ? ' (too few people for a group average)' : ''));
+      out.push('<circle class="trend-dot' + (t.thin ? ' thin' : '') + '" cx="' + x(i) +
+               '" cy="' + y(t.s.mean) + '" r="6" data-tip="' + tip + '"/>');
+      if (t.thin) {
+        out.push('<text class="trend-n" x="' + x(i) + '" y="' + (y(t.s.mean) - 14) +
+                 '" text-anchor="middle">n=' + t.s.n + '</text>');
+      }
+      var label = plot.shortLabels[t.day];
+      var parts = label.indexOf(' ') > 0 ? label.split(' ') : [label];
+      if (parts.length === 2) {          // "60+ #2" stacked, so it fits a column
+        out.push('<text class="trend-x" text-anchor="middle">' +
+                 '<tspan x="' + x(i) + '" y="' + (TH - 24) + '">' + esc(parts[0]) +
+                 '</tspan><tspan x="' + x(i) + '" y="' + (TH - 4) + '">' +
+                 esc(parts[1]) + '</tspan></text>');
+      } else {
+        out.push('<text class="trend-x" x="' + x(i) + '" y="' + (TH - 14) +
+                 '" text-anchor="middle">' + esc(label) + '</text>');
+      }
     });
-    var p = steps[peak];
-    out.push('<text class="trend-peak" x="' + x(peak) + '" y="' + (y(p.s.mean) - 14) +
-             '" text-anchor="middle">' + fixed(p.s.mean, 1) + '</text>');
+    if (peak >= 0) {
+      var p = steps[peak];
+      out.push('<text class="trend-peak" x="' + x(peak) + '" y="' + (y(p.s.mean) - 14) +
+               '" text-anchor="middle">' + fixed(p.s.mean, 1) + '</text>');
+    }
     return out.join('');
   }
 
@@ -1688,8 +1729,9 @@ JavaScript; the data table below always shows every day.</p></noscript>
   <h2 id="trend-title">Average change over time</h2>
   <p class="meta">Line: mean of everyone who answered that day. Band: the middle
   half of their answers (interquartile range, from {MIN_N_BOX} answers). Days
-  with fewer than {MIN_N_MEAN} answers are left out, which is why single
-  Day 60+ follow-ups do not appear here.</p>
+  with fewer than {MIN_N_MEAN} answers, such as single Day 60+ follow-ups,
+  continue as a dashed line marked with how many people answered: they show
+  that person's answer, not a group average.</p>
   <div class="trend-grid">{trends}</div>
 </section>
 
