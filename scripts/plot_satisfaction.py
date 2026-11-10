@@ -1137,7 +1137,7 @@ h2 { font-size: 16px; margin: 40px 0 12px; font-weight: 650; }
   stroke: var(--surface-1); stroke-width: 1.6; cursor: pointer;
   transition: opacity 120ms ease;
 }
-.dot.muted { opacity: 0.12; pointer-events: none; }
+.dot.muted { opacity: 0; pointer-events: none; }
 tr.muted { opacity: 0.35; }
 @media (prefers-reduced-motion: reduce) { .dot { transition: none; } }
 
@@ -1241,6 +1241,17 @@ HTML_SCRIPT = """
       hidden = Object.create(null);
       document.querySelectorAll('.chip[data-participant]').forEach(function (chip) {
         chip.setAttribute('aria-pressed', 'true');
+      });
+      applyFilter();
+    });
+  }
+  // Hide everyone, so a single participant can then be clicked back on.
+  var hideAll = document.querySelector('.chip-hide-all');
+  if (hideAll) {
+    hideAll.addEventListener('click', function () {
+      document.querySelectorAll('.chip[data-participant]').forEach(function (chip) {
+        hidden[chip.getAttribute('data-participant')] = true;
+        chip.setAttribute('aria-pressed', 'false');
       });
       applyFilter();
     });
@@ -1636,6 +1647,7 @@ def render_html(points: list[dict], days: list[int], visible_days: list[int],
     <span class="legend-label" id="legend-label">Participant</span>
     {chips}
     <button type="button" class="chip chip-reset plain">Show all</button>
+    <button type="button" class="chip chip-hide-all plain">Remove all</button>
   </div>
   <button type="button" class="chip plain theme-toggle" aria-pressed="false">
     Toggle dark mode
